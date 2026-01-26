@@ -1,0 +1,7 @@
+export { PersonalDataStep } from "./personal-data-step"
+export { ProfessionalDataStep } from "./professional-data-step"
+export { DocumentsStep } from "./documents-step"
+export { BankDataStep } from "./bank-data-step"
+export { ContactStep } from "./contact-step"
+export { AddressStep } from "./address-step"
+export { ReviewStep } from "./review-step"
