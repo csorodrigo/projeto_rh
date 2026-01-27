@@ -4,7 +4,18 @@ import { updateSession } from "@/lib/supabase/middleware"
 /**
  * Protected routes that require authentication
  */
-const protectedRoutes = ['/dashboard'];
+const protectedRoutes = [
+  '/dashboard',
+  '/funcionarios',
+  '/ponto',
+  '/ausencias',
+  '/pdi',
+  '/saude',
+  '/folha',
+  '/relatorios',
+  '/configuracoes',
+  '/config',
+];
 
 /**
  * Public routes that don't require authentication
