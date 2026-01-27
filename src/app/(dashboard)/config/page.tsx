@@ -7,10 +7,10 @@ import {
   Clock,
   Bell,
   Shield,
-  Palette,
-  Database,
   Save,
+  Loader2,
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,8 +24,119 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  getCurrentProfile,
+  getCompanyData,
+  updateCompanyData,
+} from "@/lib/supabase/queries"
+import type { Company, Address } from "@/types/database"
 
 export default function ConfigPage() {
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [companyId, setCompanyId] = React.useState<string | null>(null)
+  const [company, setCompany] = React.useState<Company | null>(null)
+
+  // Form state
+  const [formData, setFormData] = React.useState({
+    name: "",
+    cnpj: "",
+    email: "",
+    phone: "",
+    cep: "",
+    street: "",
+    number: "",
+    city: "",
+    state: "",
+  })
+
+  // Load company data
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        const profileResult = await getCurrentProfile()
+        if (profileResult.error || !profileResult.data?.company_id) {
+          toast.error("Erro ao carregar perfil")
+          setIsLoading(false)
+          return
+        }
+
+        const cid = profileResult.data.company_id
+        setCompanyId(cid)
+
+        const companyResult = await getCompanyData(cid)
+        if (companyResult.data) {
+          setCompany(companyResult.data)
+          const address = companyResult.data.address as Address | null
+          setFormData({
+            name: companyResult.data.name || "",
+            cnpj: companyResult.data.cnpj || "",
+            email: companyResult.data.email || "",
+            phone: companyResult.data.phone || "",
+            cep: address?.cep || "",
+            street: address?.street || "",
+            number: address?.number || "",
+            city: address?.city || "",
+            state: address?.state || "",
+          })
+        }
+      } catch {
+        toast.error("Erro ao carregar dados da empresa")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setFormData(prev => ({ ...prev, [id]: value }))
+  }
+
+  const handleSaveCompany = async () => {
+    if (!companyId) return
+
+    setIsSaving(true)
+    try {
+      const result = await updateCompanyData(companyId, {
+        name: formData.name,
+        cnpj: formData.cnpj,
+        email: formData.email,
+        phone: formData.phone,
+        address: {
+          cep: formData.cep,
+          street: formData.street,
+          number: formData.number,
+          city: formData.city,
+          state: formData.state,
+          neighborhood: "",
+          complement: "",
+        },
+      })
+
+      if (result.error) {
+        toast.error("Erro ao salvar: " + result.error.message)
+      } else {
+        toast.success("Dados salvos com sucesso!")
+        setCompany(result.data)
+      }
+    } catch {
+      toast.error("Erro ao salvar dados")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -72,20 +183,41 @@ export default function ConfigPage() {
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Nome da Empresa</Label>
-                  <Input id="companyName" placeholder="Minha Empresa LTDA" />
+                  <Label htmlFor="name">Nome da Empresa</Label>
+                  <Input
+                    id="name"
+                    placeholder="Minha Empresa LTDA"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input id="cnpj" placeholder="00.000.000/0000-00" />
+                  <Input
+                    id="cnpj"
+                    placeholder="00.000.000/0000-00"
+                    value={formData.cnpj}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="contato@empresa.com" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="contato@empresa.com"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
-                  <Input id="phone" placeholder="(00) 0000-0000" />
+                  <Input
+                    id="phone"
+                    placeholder="(00) 0000-0000"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
 
@@ -96,30 +228,59 @@ export default function ConfigPage() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor="cep">CEP</Label>
-                    <Input id="cep" placeholder="00000-000" />
+                    <Input
+                      id="cep"
+                      placeholder="00000-000"
+                      value={formData.cep}
+                      onChange={handleInputChange}
+                    />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="street">Rua</Label>
-                    <Input id="street" placeholder="Rua Example" />
+                    <Input
+                      id="street"
+                      placeholder="Rua Example"
+                      value={formData.street}
+                      onChange={handleInputChange}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="number">Numero</Label>
-                    <Input id="number" placeholder="123" />
+                    <Input
+                      id="number"
+                      placeholder="123"
+                      value={formData.number}
+                      onChange={handleInputChange}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="city">Cidade</Label>
-                    <Input id="city" placeholder="Sao Paulo" />
+                    <Input
+                      id="city"
+                      placeholder="Sao Paulo"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="state">Estado</Label>
-                    <Input id="state" placeholder="SP" />
+                    <Input
+                      id="state"
+                      placeholder="SP"
+                      value={formData.state}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-end">
-                <Button>
-                  <Save className="mr-2 size-4" />
+                <Button onClick={handleSaveCompany} disabled={isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 size-4" />
+                  )}
                   Salvar Alteracoes
                 </Button>
               </div>

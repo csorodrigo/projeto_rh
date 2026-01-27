@@ -10,7 +10,9 @@ import {
   Calendar,
   TrendingUp,
   PieChart,
+  Loader2,
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +22,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  getCurrentProfile,
+  getReportStats,
+} from "@/lib/supabase/queries"
 
 const reportTypes = [
   {
@@ -67,6 +73,45 @@ const reportTypes = [
 ]
 
 export default function RelatoriosPage() {
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [stats, setStats] = React.useState({
+    totalEmployees: 0,
+    attendanceRate: 0,
+    turnoverRate: 0,
+    overtimeHours: 0,
+  })
+
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        const profileResult = await getCurrentProfile()
+        if (profileResult.error || !profileResult.data?.company_id) {
+          toast.error("Erro ao carregar perfil")
+          setIsLoading(false)
+          return
+        }
+
+        const companyId = profileResult.data.company_id
+        const statsResult = await getReportStats(companyId)
+        setStats(statsResult)
+      } catch {
+        toast.error("Erro ao carregar estatísticas")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -149,19 +194,19 @@ export default function RelatoriosPage() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="text-center p-4 rounded-lg bg-muted/50">
-              <p className="text-3xl font-bold text-blue-600">125</p>
+              <p className="text-3xl font-bold text-blue-600">{stats.totalEmployees}</p>
               <p className="text-sm text-muted-foreground">Funcionarios ativos</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
-              <p className="text-3xl font-bold text-green-600">98%</p>
+              <p className="text-3xl font-bold text-green-600">{stats.attendanceRate}%</p>
               <p className="text-sm text-muted-foreground">Taxa de presenca</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
-              <p className="text-3xl font-bold text-yellow-600">2.1%</p>
+              <p className="text-3xl font-bold text-yellow-600">{stats.turnoverRate}%</p>
               <p className="text-sm text-muted-foreground">Turnover mensal</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
-              <p className="text-3xl font-bold text-purple-600">340h</p>
+              <p className="text-3xl font-bold text-purple-600">{stats.overtimeHours}h</p>
               <p className="text-sm text-muted-foreground">Horas extras mes</p>
             </div>
           </div>

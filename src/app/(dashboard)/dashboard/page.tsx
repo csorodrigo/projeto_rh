@@ -13,7 +13,9 @@ import {
   Calendar,
   FileText,
   Heart,
+  Loader2,
 } from "lucide-react"
+import { toast } from "sonner"
 
 import {
   Card,
@@ -24,6 +26,13 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  getCurrentProfile,
+  getDashboardStats,
+  getRecentActivity,
+  type DashboardStats,
+  type RecentActivity as RecentActivityType,
+} from "@/lib/supabase/queries"
 
 interface StatCardProps {
   title: string
@@ -105,16 +114,8 @@ function QuickAction({ title, description, icon: Icon, href }: QuickActionProps)
   )
 }
 
-interface RecentActivityItem {
-  id: string
-  type: "ponto" | "ausencia" | "funcionario" | "aso"
-  title: string
-  description: string
-  time: string
-}
-
-function RecentActivity({ items }: { items: RecentActivityItem[] }) {
-  const getIcon = (type: RecentActivityItem["type"]) => {
+function RecentActivityList({ items }: { items: RecentActivityType[] }) {
+  const getIcon = (type: RecentActivityType["type"]) => {
     switch (type) {
       case "ponto":
         return Clock
@@ -129,7 +130,7 @@ function RecentActivity({ items }: { items: RecentActivityItem[] }) {
     }
   }
 
-  const getBadgeVariant = (type: RecentActivityItem["type"]) => {
+  const getBadgeVariant = (type: RecentActivityType["type"]) => {
     switch (type) {
       case "ponto":
         return "default"
@@ -142,6 +143,30 @@ function RecentActivity({ items }: { items: RecentActivityItem[] }) {
       default:
         return "default"
     }
+  }
+
+  const typeLabels: Record<string, string> = {
+    ponto: "Ponto",
+    ausencia: "Ausência",
+    funcionario: "Funcionário",
+    aso: "ASO",
+  }
+
+  if (items.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Atividade Recente</CardTitle>
+          <CardDescription>Ultimas movimentacoes do sistema</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <Clock className="mx-auto size-10 opacity-50 mb-2" />
+            <p>Nenhuma atividade recente</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -163,7 +188,7 @@ function RecentActivity({ items }: { items: RecentActivityItem[] }) {
                   <div className="flex items-center gap-2">
                     <span className="font-medium truncate">{item.title}</span>
                     <Badge variant={getBadgeVariant(item.type)} className="text-xs">
-                      {item.type}
+                      {typeLabels[item.type] || item.type}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">
@@ -183,51 +208,46 @@ function RecentActivity({ items }: { items: RecentActivityItem[] }) {
 }
 
 export default function DashboardPage() {
-  // Placeholder data - will be replaced with real data from API
-  const stats = {
-    totalFuncionarios: 125,
-    presentesHoje: 118,
-    feriasAusentes: 7,
-    asosVencendo: 4,
-  }
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [stats, setStats] = React.useState<DashboardStats>({
+    totalEmployees: 0,
+    presentToday: 0,
+    absentToday: 0,
+    expiringASOs: 0,
+    overtimeHours: 0,
+    attendanceRate: 0,
+  })
+  const [recentActivity, setRecentActivity] = React.useState<RecentActivityType[]>([])
 
-  const recentActivity: RecentActivityItem[] = [
-    {
-      id: "1",
-      type: "ponto",
-      title: "Registro de Ponto",
-      description: "Maria Silva registrou entrada as 08:00",
-      time: "5 min",
-    },
-    {
-      id: "2",
-      type: "ausencia",
-      title: "Solicitacao de Ferias",
-      description: "Joao Santos solicitou ferias para Janeiro",
-      time: "1 hora",
-    },
-    {
-      id: "3",
-      type: "funcionario",
-      title: "Novo Funcionario",
-      description: "Pedro Costa foi cadastrado no sistema",
-      time: "2 horas",
-    },
-    {
-      id: "4",
-      type: "aso",
-      title: "ASO Vencendo",
-      description: "Ana Oliveira com ASO vencendo em 7 dias",
-      time: "3 horas",
-    },
-    {
-      id: "5",
-      type: "ponto",
-      title: "Ajuste de Ponto",
-      description: "Carlos Lima solicitou ajuste de ponto",
-      time: "5 horas",
-    },
-  ]
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        const profileResult = await getCurrentProfile()
+        if (profileResult.error || !profileResult.data?.company_id) {
+          toast.error("Erro ao carregar perfil")
+          setIsLoading(false)
+          return
+        }
+
+        const companyId = profileResult.data.company_id
+
+        // Load data in parallel
+        const [statsResult, activityResult] = await Promise.all([
+          getDashboardStats(companyId),
+          getRecentActivity(companyId),
+        ])
+
+        setStats(statsResult)
+        setRecentActivity(activityResult)
+      } catch {
+        toast.error("Erro ao carregar dados do dashboard")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
 
   const quickActions: QuickActionProps[] = [
     {
@@ -256,6 +276,14 @@ export default function DashboardPage() {
     },
   ]
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -270,28 +298,27 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Funcionarios"
-          value={stats.totalFuncionarios}
+          value={stats.totalEmployees}
           description="Funcionarios ativos"
           icon={Users}
-          trend={{ value: 2.5, label: "vs mes anterior" }}
         />
         <StatCard
           title="Presentes Hoje"
-          value={stats.presentesHoje}
-          description={`${Math.round((stats.presentesHoje / stats.totalFuncionarios) * 100)}% de presenca`}
+          value={stats.presentToday}
+          description={`${stats.attendanceRate}% de presenca`}
           icon={UserCheck}
           variant="success"
         />
         <StatCard
           title="Ferias/Ausentes"
-          value={stats.feriasAusentes}
+          value={stats.absentToday}
           description="Funcionarios ausentes hoje"
           icon={Plane}
           variant="warning"
         />
         <StatCard
           title="ASOs Vencendo"
-          value={stats.asosVencendo}
+          value={stats.expiringASOs}
           description="Nos proximos 30 dias"
           icon={AlertTriangle}
           variant="danger"
@@ -314,7 +341,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Activity */}
-        <RecentActivity items={recentActivity} />
+        <RecentActivityList items={recentActivity} />
       </div>
 
       {/* Chart Placeholder */}

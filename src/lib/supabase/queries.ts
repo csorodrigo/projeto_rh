@@ -2580,3 +2580,330 @@ export async function updatePDIProgress(
     error: updateError ? { message: updateError.message, code: updateError.code } : null,
   };
 }
+
+
+// ====================
+// DASHBOARD QUERIES
+// ====================
+
+export interface DashboardStats {
+  totalEmployees: number;
+  presentToday: number;
+  absentToday: number;
+  expiringASOs: number;
+  overtimeHours: number;
+  attendanceRate: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: 'ponto' | 'ausencia' | 'funcionario' | 'aso';
+  title: string;
+  description: string;
+  time: string;
+  created_at: string;
+}
+
+/**
+ * Get dashboard statistics for a company
+ */
+export async function getDashboardStats(companyId: string): Promise<DashboardStats> {
+  const supabase = createClient();
+  const today = new Date().toISOString().split('T')[0];
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // Get total active employees
+  const { count: totalEmployees } = await supabase
+    .from('employees')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('status', 'active');
+
+  // Get employees who clocked in today
+  const { count: presentToday } = await supabase
+    .from('time_entries')
+    .select('employee_id', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('date', today)
+    .not('clock_in', 'is', null);
+
+  // Get employees on absence today
+  const { count: absentToday } = await supabase
+    .from('absences')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .in('status', ['approved', 'in_progress'])
+    .lte('start_date', today)
+    .gte('end_date', today);
+
+  // Get expiring ASOs in next 30 days
+  const { count: expiringASOs } = await supabase
+    .from('asos')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .lte('expiration_date', thirtyDaysFromNow)
+    .gte('expiration_date', today);
+
+  const total = totalEmployees || 0;
+  const present = presentToday || 0;
+  const absent = absentToday || 0;
+  const attendanceRate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+  return {
+    totalEmployees: total,
+    presentToday: present,
+    absentToday: absent,
+    expiringASOs: expiringASOs || 0,
+    overtimeHours: 0, // Would require more complex calculation
+    attendanceRate,
+  };
+}
+
+/**
+ * Get recent activity for dashboard
+ */
+export async function getRecentActivity(companyId: string, limit: number = 10): Promise<RecentActivity[]> {
+  const supabase = createClient();
+  const activities: RecentActivity[] = [];
+
+  // Get recent time entries
+  const { data: timeEntries } = await supabase
+    .from('time_entries')
+    .select(`
+      id,
+      clock_in,
+      created_at,
+      employees!inner(full_name)
+    `)
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (timeEntries) {
+    for (const entry of timeEntries) {
+      const employee = entry.employees as { full_name: string };
+      const clockIn = entry.clock_in ? new Date(entry.clock_in).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+      activities.push({
+        id: `time-${entry.id}`,
+        type: 'ponto',
+        title: 'Registro de Ponto',
+        description: `${employee.full_name} registrou entrada às ${clockIn}`,
+        time: getRelativeTime(entry.created_at),
+        created_at: entry.created_at,
+      });
+    }
+  }
+
+  // Get recent absences
+  const { data: absences } = await supabase
+    .from('absences')
+    .select(`
+      id,
+      absence_type,
+      created_at,
+      employees!inner(full_name)
+    `)
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (absences) {
+    for (const absence of absences) {
+      const employee = absence.employees as { full_name: string };
+      const typeLabel = absence.absence_type === 'vacation' ? 'férias' : 'ausência';
+      activities.push({
+        id: `absence-${absence.id}`,
+        type: 'ausencia',
+        title: 'Solicitação de Ausência',
+        description: `${employee.full_name} solicitou ${typeLabel}`,
+        time: getRelativeTime(absence.created_at),
+        created_at: absence.created_at,
+      });
+    }
+  }
+
+  // Get recent employees
+  const { data: employees } = await supabase
+    .from('employees')
+    .select('id, full_name, created_at')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(2);
+
+  if (employees) {
+    for (const emp of employees) {
+      activities.push({
+        id: `employee-${emp.id}`,
+        type: 'funcionario',
+        title: 'Novo Funcionário',
+        description: `${emp.full_name} foi cadastrado no sistema`,
+        time: getRelativeTime(emp.created_at),
+        created_at: emp.created_at,
+      });
+    }
+  }
+
+  // Get expiring ASOs
+  const today = new Date().toISOString().split('T')[0];
+  const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const { data: asos } = await supabase
+    .from('asos')
+    .select(`
+      id,
+      expiration_date,
+      created_at,
+      employees!inner(full_name)
+    `)
+    .eq('company_id', companyId)
+    .lte('expiration_date', sevenDaysFromNow)
+    .gte('expiration_date', today)
+    .limit(2);
+
+  if (asos) {
+    for (const aso of asos) {
+      const employee = aso.employees as { full_name: string };
+      const daysLeft = Math.ceil((new Date(aso.expiration_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      activities.push({
+        id: `aso-${aso.id}`,
+        type: 'aso',
+        title: 'ASO Vencendo',
+        description: `${employee.full_name} com ASO vencendo em ${daysLeft} dias`,
+        time: getRelativeTime(aso.created_at),
+        created_at: aso.created_at,
+      });
+    }
+  }
+
+  // Sort by created_at and return limited results
+  return activities
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit);
+}
+
+/**
+ * Get relative time string (e.g., "5 min", "2 horas")
+ */
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'agora';
+  if (diffMins < 60) return `${diffMins} min`;
+  if (diffHours < 24) return `${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+  return `${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+}
+
+/**
+ * Get report statistics for company
+ */
+export async function getReportStats(companyId: string): Promise<{
+  totalEmployees: number;
+  attendanceRate: number;
+  turnoverRate: number;
+  overtimeHours: number;
+}> {
+  const supabase = createClient();
+  const today = new Date();
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  // Total employees
+  const { count: totalEmployees } = await supabase
+    .from('employees')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('status', 'active');
+
+  // Calculate attendance rate (days with clock-in / total working days)
+  const { count: daysWithAttendance } = await supabase
+    .from('time_entries')
+    .select('date', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .gte('date', startOfMonth)
+    .lte('date', endOfMonth);
+
+  // Simple calculation for demo - would need more complex logic in production
+  const workingDays = 22; // Average working days in a month
+  const attendanceRate = daysWithAttendance && totalEmployees
+    ? Math.min(100, Math.round((daysWithAttendance / (workingDays * (totalEmployees || 1))) * 100))
+    : 0;
+
+  // Calculate turnover (terminations this month / total employees)
+  const { count: terminations } = await supabase
+    .from('employees')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('status', 'terminated')
+    .gte('termination_date', startOfMonth);
+
+  const turnoverRate = totalEmployees && terminations
+    ? Math.round((terminations / (totalEmployees || 1)) * 100 * 10) / 10
+    : 0;
+
+  // Get overtime hours from payroll
+  const { data: payrollData } = await supabase
+    .from('employee_payrolls')
+    .select('overtime_50_hours, overtime_100_hours')
+    .eq('company_id', companyId);
+
+  const overtimeHours = payrollData?.reduce((acc, p) => {
+    return acc + (p.overtime_50_hours || 0) + (p.overtime_100_hours || 0);
+  }, 0) || 0;
+
+  return {
+    totalEmployees: totalEmployees || 0,
+    attendanceRate,
+    turnoverRate,
+    overtimeHours: Math.round(overtimeHours),
+  };
+}
+
+
+// ====================
+// CONFIG / COMPANY QUERIES
+// ====================
+
+/**
+ * Get company data
+ */
+export async function getCompanyData(companyId: string): Promise<QueryResult<Company>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', companyId)
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Update company data
+ */
+export async function updateCompanyData(
+  companyId: string,
+  data: Partial<Omit<Company, 'id' | 'created_at' | 'updated_at'>>
+): Promise<QueryResult<Company>> {
+  const supabase = createClient();
+
+  const { data: updated, error } = await supabase
+    .from('companies')
+    .update(data)
+    .eq('id', companyId)
+    .select()
+    .single();
+
+  return {
+    data: updated,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
