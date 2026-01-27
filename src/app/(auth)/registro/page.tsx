@@ -75,6 +75,8 @@ export default function RegisterPage() {
       if (authError) {
         if (authError.message.includes("already registered")) {
           toast.error("Este email ja esta cadastrado.")
+        } else if (authError.message.includes("rate limit") || authError.status === 429) {
+          toast.error("Muitas tentativas. Aguarde alguns minutos e tente novamente.")
         } else {
           toast.error("Erro ao criar conta. Tente novamente.")
         }
