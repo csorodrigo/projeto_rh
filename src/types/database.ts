@@ -139,7 +139,7 @@ export interface PayrollDeduction {
 }
 
 // Table Types
-export type CompanyStatus = 'active' | 'inactive' | 'suspended' | 'trial';
+export type CompanyStatus = 'active' | 'suspended' | 'cancelled';
 
 export interface Company {
   id: string;

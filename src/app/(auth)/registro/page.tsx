@@ -92,6 +92,7 @@ export default function RegisterPage() {
         .from("companies")
         .insert({
           name: data.companyName,
+          email: data.email,
           owner_id: user.id,
           status: "active",
         })
