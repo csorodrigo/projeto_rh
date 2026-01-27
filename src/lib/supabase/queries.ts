@@ -486,6 +486,240 @@ export async function getEmployeeMedicalCertificates(
   };
 }
 
+// ============================================================
+// HEALTH MODULE - Company-wide queries
+// ============================================================
+
+export interface ASOWithEmployee extends ASO {
+  employee_name: string;
+  employee_department: string | null;
+  employee_photo_url: string | null;
+}
+
+export interface MedicalCertificateWithEmployee extends MedicalCertificate {
+  employee_name: string;
+  employee_department: string | null;
+}
+
+/**
+ * List all ASOs for a company with employee info
+ */
+export async function listCompanyASOs(
+  companyId: string,
+  filters?: {
+    status?: 'active' | 'expiring' | 'expired';
+    examType?: string;
+    employeeId?: string;
+  }
+): Promise<QueryResultArray<ASOWithEmployee>> {
+  const supabase = createClient();
+
+  let query = supabase
+    .from('asos')
+    .select(`
+      *,
+      employees!inner (
+        name,
+        department,
+        photo_url
+      )
+    `)
+    .eq('company_id', companyId)
+    .order('expiration_date', { ascending: true });
+
+  if (filters?.examType) {
+    query = query.eq('exam_type', filters.examType);
+  }
+
+  if (filters?.employeeId) {
+    query = query.eq('employee_id', filters.employeeId);
+  }
+
+  const { data, error } = await query;
+
+  // Transform data to flatten employee info
+  const transformedData = data?.map((aso: Record<string, unknown>) => ({
+    ...aso,
+    employee_name: (aso.employees as Record<string, unknown>)?.name as string || '',
+    employee_department: (aso.employees as Record<string, unknown>)?.department as string | null,
+    employee_photo_url: (aso.employees as Record<string, unknown>)?.photo_url as string | null,
+    employees: undefined,
+  })) as ASOWithEmployee[] | null;
+
+  // Filter by status after fetching (calculated field)
+  let filteredData = transformedData;
+  if (filters?.status && filteredData) {
+    const today = new Date();
+    filteredData = filteredData.filter((aso) => {
+      const expirationDate = new Date(aso.expiration_date);
+      const daysUntilExpiration = Math.ceil(
+        (expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      switch (filters.status) {
+        case 'expired':
+          return daysUntilExpiration < 0;
+        case 'expiring':
+          return daysUntilExpiration >= 0 && daysUntilExpiration <= 30;
+        case 'active':
+          return daysUntilExpiration > 30;
+        default:
+          return true;
+      }
+    });
+  }
+
+  return {
+    data: filteredData,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * List all medical certificates for a company with employee info
+ */
+export async function listCompanyMedicalCertificates(
+  companyId: string,
+  filters?: {
+    startDate?: string;
+    endDate?: string;
+    employeeId?: string;
+  }
+): Promise<QueryResultArray<MedicalCertificateWithEmployee>> {
+  const supabase = createClient();
+
+  let query = supabase
+    .from('medical_certificates')
+    .select(`
+      *,
+      employees!inner (
+        name,
+        department
+      )
+    `)
+    .eq('company_id', companyId)
+    .order('certificate_date', { ascending: false });
+
+  if (filters?.employeeId) {
+    query = query.eq('employee_id', filters.employeeId);
+  }
+
+  if (filters?.startDate) {
+    query = query.gte('certificate_date', filters.startDate);
+  }
+
+  if (filters?.endDate) {
+    query = query.lte('certificate_date', filters.endDate);
+  }
+
+  const { data, error } = await query;
+
+  // Transform data to flatten employee info
+  const transformedData = data?.map((cert: Record<string, unknown>) => ({
+    ...cert,
+    employee_name: (cert.employees as Record<string, unknown>)?.name as string || '',
+    employee_department: (cert.employees as Record<string, unknown>)?.department as string | null,
+    employees: undefined,
+  })) as MedicalCertificateWithEmployee[] | null;
+
+  return {
+    data: transformedData,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Create a new ASO
+ */
+export async function createASO(
+  data: Omit<ASO, 'id' | 'created_at' | 'updated_at'>
+): Promise<QueryResult<ASO>> {
+  const supabase = createClient();
+
+  const { data: aso, error } = await supabase
+    .from('asos')
+    .insert(data)
+    .select()
+    .single();
+
+  return {
+    data: aso,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Create a new medical certificate
+ */
+export async function createMedicalCertificate(
+  data: Omit<MedicalCertificate, 'id' | 'created_at' | 'updated_at'>
+): Promise<QueryResult<MedicalCertificate>> {
+  const supabase = createClient();
+
+  const { data: certificate, error } = await supabase
+    .from('medical_certificates')
+    .insert(data)
+    .select()
+    .single();
+
+  return {
+    data: certificate,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Get health statistics for a company
+ */
+export async function getHealthStats(companyId: string): Promise<{
+  totalASOs: number;
+  expiringASOs: number;
+  expiredASOs: number;
+  certificatesThisMonth: number;
+  totalDaysOff: number;
+}> {
+  const supabase = createClient();
+  const today = new Date();
+  const thirtyDaysFromNow = new Date(today);
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  // Get all ASOs
+  const { data: asos } = await supabase
+    .from('asos')
+    .select('expiration_date')
+    .eq('company_id', companyId);
+
+  // Get certificates this month
+  const { data: certificates } = await supabase
+    .from('medical_certificates')
+    .select('days_off')
+    .eq('company_id', companyId)
+    .gte('certificate_date', firstDayOfMonth.toISOString().split('T')[0]);
+
+  const totalASOs = asos?.length || 0;
+  const expiringASOs = asos?.filter((aso) => {
+    const expDate = new Date(aso.expiration_date);
+    return expDate >= today && expDate <= thirtyDaysFromNow;
+  }).length || 0;
+  const expiredASOs = asos?.filter((aso) => {
+    const expDate = new Date(aso.expiration_date);
+    return expDate < today;
+  }).length || 0;
+
+  const certificatesThisMonth = certificates?.length || 0;
+  const totalDaysOff = certificates?.reduce((sum, cert) => sum + (cert.days_off || 0), 0) || 0;
+
+  return {
+    totalASOs,
+    expiringASOs,
+    expiredASOs,
+    certificatesThisMonth,
+    totalDaysOff,
+  };
+}
+
 /**
  * Get employee evaluations
  */
