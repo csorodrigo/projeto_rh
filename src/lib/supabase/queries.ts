@@ -22,6 +22,10 @@ import type {
   Evaluation,
   PDI,
   Payroll,
+  PayrollPeriod,
+  EmployeePayroll,
+  PayrollStatus,
+  PayrollPeriodType,
   Database,
   TimeRecord,
   TimeTrackingDaily,
@@ -1871,5 +1875,357 @@ export async function checkAbsenceOverlap(
   return {
     data: (count ?? 0) > 0,
     error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+// ============================================
+// PAYROLL QUERIES (Folha de Pagamento)
+// ============================================
+
+/**
+ * Interface for employee payroll with employee info
+ */
+export interface EmployeePayrollWithEmployee extends EmployeePayroll {
+  employee_name: string;
+  employee_department: string | null;
+  employee_photo_url: string | null;
+}
+
+/**
+ * List payroll periods for a company
+ */
+export async function listPayrollPeriods(
+  companyId: string,
+  filters?: {
+    year?: number;
+    status?: PayrollStatus;
+    periodType?: PayrollPeriodType;
+  }
+): Promise<QueryResultArray<PayrollPeriod>> {
+  const supabase = createClient();
+
+  let query = supabase
+    .from('payroll_periods')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('year', { ascending: false })
+    .order('month', { ascending: false });
+
+  if (filters?.year) {
+    query = query.eq('year', filters.year);
+  }
+
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  if (filters?.periodType) {
+    query = query.eq('period_type', filters.periodType);
+  }
+
+  const { data, error } = await query;
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Get a single payroll period by ID
+ */
+export async function getPayrollPeriod(
+  periodId: string
+): Promise<QueryResult<PayrollPeriod>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('payroll_periods')
+    .select('*')
+    .eq('id', periodId)
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Get or create payroll period for a given month/year
+ */
+export async function getOrCreatePayrollPeriod(
+  companyId: string,
+  year: number,
+  month: number,
+  periodType: PayrollPeriodType = 'monthly'
+): Promise<QueryResult<PayrollPeriod>> {
+  const supabase = createClient();
+
+  // Check if period exists
+  const { data: existing, error: findError } = await supabase
+    .from('payroll_periods')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('year', year)
+    .eq('month', month)
+    .eq('period_type', periodType)
+    .single();
+
+  if (existing) {
+    return { data: existing, error: null };
+  }
+
+  // Create new period if not exists (and not a "not found" error)
+  if (findError && findError.code !== 'PGRST116') {
+    return {
+      data: null,
+      error: { message: findError.message, code: findError.code },
+    };
+  }
+
+  const referenceDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+
+  const { data: created, error: createError } = await supabase
+    .from('payroll_periods')
+    .insert({
+      company_id: companyId,
+      year,
+      month,
+      reference_date: referenceDate,
+      period_type: periodType,
+      status: 'draft',
+    })
+    .select()
+    .single();
+
+  return {
+    data: created,
+    error: createError ? { message: createError.message, code: createError.code } : null,
+  };
+}
+
+/**
+ * List employee payrolls for a period
+ */
+export async function listEmployeePayrolls(
+  periodId: string
+): Promise<QueryResultArray<EmployeePayrollWithEmployee>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('employee_payrolls')
+    .select(
+      `
+      *,
+      employees!inner(full_name, department, photo_url)
+    `
+    )
+    .eq('period_id', periodId)
+    .order('employee_data->name', { ascending: true });
+
+  const formattedData = data?.map((item) => ({
+    ...item,
+    employee_name:
+      (item.employees as { full_name: string }).full_name ||
+      item.employee_data?.name ||
+      'Desconhecido',
+    employee_department: (item.employees as { department: string | null }).department,
+    employee_photo_url: (item.employees as { photo_url: string | null }).photo_url,
+  })) as EmployeePayrollWithEmployee[] | null;
+
+  return {
+    data: formattedData,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Get payroll statistics for dashboard
+ */
+export async function getPayrollStats(
+  companyId: string,
+  year?: number,
+  month?: number
+): Promise<{
+  totalNetSalary: number;
+  totalEmployees: number;
+  totalOvertime: number;
+  totalBonuses: number;
+  totalDeductions: number;
+  periodStatus: PayrollStatus | null;
+}> {
+  const supabase = createClient();
+
+  const now = new Date();
+  const targetYear = year ?? now.getFullYear();
+  const targetMonth = month ?? now.getMonth() + 1;
+
+  // Get the current period
+  const { data: period } = await supabase
+    .from('payroll_periods')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('year', targetYear)
+    .eq('month', targetMonth)
+    .eq('period_type', 'monthly')
+    .single();
+
+  if (!period) {
+    return {
+      totalNetSalary: 0,
+      totalEmployees: 0,
+      totalOvertime: 0,
+      totalBonuses: 0,
+      totalDeductions: 0,
+      periodStatus: null,
+    };
+  }
+
+  // Get employee payrolls for this period
+  const { data: payrolls } = await supabase
+    .from('employee_payrolls')
+    .select('net_salary, total_earnings, total_deductions, overtime_50_value, overtime_100_value, earnings')
+    .eq('period_id', period.id);
+
+  if (!payrolls || payrolls.length === 0) {
+    return {
+      totalNetSalary: period.total_net || 0,
+      totalEmployees: period.total_employees || 0,
+      totalOvertime: 0,
+      totalBonuses: 0,
+      totalDeductions: period.total_deductions || 0,
+      periodStatus: period.status as PayrollStatus,
+    };
+  }
+
+  let totalOvertime = 0;
+  let totalBonuses = 0;
+
+  payrolls.forEach((p) => {
+    totalOvertime += (p.overtime_50_value || 0) + (p.overtime_100_value || 0);
+    // Calculate bonuses from earnings array (excluding base salary)
+    if (p.earnings && Array.isArray(p.earnings)) {
+      p.earnings.forEach((earning: { code?: string; value?: number }) => {
+        if (earning.code !== '001') {
+          // Not base salary
+          totalBonuses += earning.value || 0;
+        }
+      });
+    }
+  });
+
+  return {
+    totalNetSalary: period.total_net || payrolls.reduce((acc, p) => acc + (p.net_salary || 0), 0),
+    totalEmployees: payrolls.length,
+    totalOvertime,
+    totalBonuses,
+    totalDeductions: period.total_deductions || payrolls.reduce((acc, p) => acc + (p.total_deductions || 0), 0),
+    periodStatus: period.status as PayrollStatus,
+  };
+}
+
+/**
+ * Update payroll period status
+ */
+export async function updatePayrollPeriodStatus(
+  periodId: string,
+  status: PayrollStatus,
+  approvedBy?: string
+): Promise<QueryResult<PayrollPeriod>> {
+  const supabase = createClient();
+
+  const updateData: Partial<PayrollPeriod> = { status };
+
+  if (status === 'approved' && approvedBy) {
+    updateData.approved_by = approvedBy;
+    updateData.approved_at = new Date().toISOString();
+  }
+
+  const { data, error } = await supabase
+    .from('payroll_periods')
+    .update(updateData)
+    .eq('id', periodId)
+    .select()
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Generate payroll for all active employees in a period
+ * Calls the database function calculate_employee_payroll for each employee
+ */
+export async function generatePayrollForPeriod(
+  companyId: string,
+  periodId: string
+): Promise<QueryResult<{ processed: number; errors: string[] }>> {
+  const supabase = createClient();
+
+  // Get all active employees
+  const { data: employees, error: empError } = await supabase
+    .from('employees')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('status', 'active');
+
+  if (empError) {
+    return {
+      data: null,
+      error: { message: empError.message, code: empError.code },
+    };
+  }
+
+  if (!employees || employees.length === 0) {
+    return {
+      data: { processed: 0, errors: [] },
+      error: null,
+    };
+  }
+
+  // Update period status to calculating
+  await supabase
+    .from('payroll_periods')
+    .update({ status: 'calculating', total_employees: employees.length })
+    .eq('id', periodId);
+
+  const errors: string[] = [];
+  let processed = 0;
+
+  // Calculate payroll for each employee
+  for (const employee of employees) {
+    try {
+      const { error } = await supabase.rpc('calculate_employee_payroll', {
+        p_employee_id: employee.id,
+        p_period_id: periodId,
+      });
+
+      if (error) {
+        errors.push(`${employee.id}: ${error.message}`);
+      } else {
+        processed++;
+      }
+    } catch (err) {
+      errors.push(`${employee.id}: ${String(err)}`);
+    }
+  }
+
+  // Update period status to calculated
+  await supabase
+    .from('payroll_periods')
+    .update({
+      status: errors.length > 0 ? 'review' : 'calculated',
+      calculation_date: new Date().toISOString().split('T')[0],
+      total_processed: processed,
+      total_errors: errors.length,
+    })
+    .eq('id', periodId);
+
+  return {
+    data: { processed, errors },
+    error: null,
   };
 }

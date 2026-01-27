@@ -53,6 +53,12 @@ export type ClockType = 'clock_in' | 'clock_out' | 'break_start' | 'break_end';
 export type RecordSource = 'mobile_app' | 'web' | 'biometric' | 'manual' | 'import';
 export type TimeBankMovementType = 'credit' | 'debit' | 'adjustment' | 'expiry';
 
+// Payroll Types
+export type PayrollStatus = 'draft' | 'calculating' | 'calculated' | 'review' | 'approved' | 'processing' | 'paid' | 'exported' | 'cancelled';
+export type PayrollPeriodType = 'monthly' | 'advance' | '13th_1' | '13th_2' | 'vacation' | 'severance';
+export type PayrollEventType = 'earning' | 'deduction' | 'information';
+export type EventRecurrence = 'fixed' | 'variable' | 'one_time' | 'temporary';
+
 // JSON Types
 export interface Address {
   street: string;
@@ -630,6 +636,94 @@ export interface Payroll {
   generated_at: string;
   paid_at: string | null;
   document_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Payroll Period (migration 011)
+export interface PayrollPeriod {
+  id: string;
+  company_id: string;
+  year: number;
+  month: number;
+  reference_date: string;
+  period_type: PayrollPeriodType;
+  calculation_date: string | null;
+  payment_date: string | null;
+  cutoff_date: string | null;
+  total_gross: number;
+  total_deductions: number;
+  total_net: number;
+  total_employer_costs: number;
+  total_employees: number;
+  total_processed: number;
+  total_errors: number;
+  status: PayrollStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  exported_at: string | null;
+  export_file_url: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+// Employee Payroll (folha individual)
+export interface EmployeePayroll {
+  id: string;
+  company_id: string;
+  period_id: string;
+  employee_id: string;
+  employee_data: {
+    name: string;
+    cpf: string;
+    position: string;
+    department: string;
+    hire_date?: string;
+    base_salary?: number;
+  };
+  base_salary: number;
+  worked_days: number;
+  worked_hours: number | null;
+  missing_days: number;
+  missing_hours: number;
+  overtime_50_hours: number;
+  overtime_50_value: number;
+  overtime_100_hours: number;
+  overtime_100_value: number;
+  night_shift_hours: number;
+  night_shift_value: number;
+  dsr_value: number;
+  earnings: PayrollEarning[];
+  deductions: PayrollDeduction[];
+  total_earnings: number;
+  total_deductions: number;
+  net_salary: number;
+  employer_inss: number;
+  employer_fgts: number;
+  employer_other: number;
+  total_employer_cost: number;
+  inss_base: number;
+  inss_value: number;
+  inss_rate: number | null;
+  irrf_base: number;
+  irrf_deductions: number;
+  irrf_value: number;
+  irrf_rate: number | null;
+  fgts_base: number;
+  fgts_value: number;
+  bank_data: {
+    bank?: string;
+    agency?: string;
+    account?: string;
+    pix?: string;
+  };
+  status: PayrollStatus;
+  has_errors: boolean;
+  error_messages: string[] | null;
+  validated_at: string | null;
+  validated_by: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -20,6 +20,8 @@ export type {
   PDI,
   PDICheckIn,
   Payroll,
+  PayrollPeriod,
+  EmployeePayroll,
   // Enums
   UserRole,
   EmployeeStatus,
@@ -27,6 +29,10 @@ export type {
   AbsenceType,
   EvaluationStatus,
   PDIStatus,
+  PayrollStatus,
+  PayrollPeriodType,
+  PayrollEventType,
+  EventRecurrence,
   // JSON types
   Address,
   Benefit,
