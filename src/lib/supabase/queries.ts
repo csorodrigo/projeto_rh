@@ -2229,3 +2229,354 @@ export async function generatePayrollForPeriod(
     error: null,
   };
 }
+
+// ============================================
+// PDI QUERIES (Plano de Desenvolvimento Individual)
+// ============================================
+
+/**
+ * Interface for PDI with employee info
+ */
+export interface PDIWithEmployee {
+  id: string;
+  company_id: string;
+  employee_id: string;
+  title: string;
+  description: string | null;
+  start_date: string;
+  target_date: string;
+  completed_date: string | null;
+  objectives: {
+    id: string;
+    description: string;
+    competency_id?: string;
+    current_level?: number;
+    target_level?: number;
+    measurement_criteria?: string;
+    status: string;
+    progress: number;
+  }[];
+  status: string;
+  overall_progress: number;
+  mentor_id: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  employee_name: string;
+  employee_department: string | null;
+  employee_photo_url: string | null;
+}
+
+/**
+ * List PDIs for a company
+ */
+export async function listCompanyPDIs(
+  companyId: string,
+  filters?: {
+    status?: string;
+    employeeId?: string;
+  }
+): Promise<QueryResultArray<PDIWithEmployee>> {
+  const supabase = createClient();
+
+  let query = supabase
+    .from('pdis')
+    .select(
+      `
+      *,
+      employees!inner(full_name, department, photo_url)
+    `
+    )
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false });
+
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  if (filters?.employeeId) {
+    query = query.eq('employee_id', filters.employeeId);
+  }
+
+  const { data, error } = await query;
+
+  const formattedData = data?.map((item) => ({
+    ...item,
+    objectives: item.objectives || [],
+    employee_name: (item.employees as { full_name: string }).full_name,
+    employee_department: (item.employees as { department: string | null }).department,
+    employee_photo_url: (item.employees as { photo_url: string | null }).photo_url,
+  })) as PDIWithEmployee[] | null;
+
+  return {
+    data: formattedData,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Get a single PDI by ID
+ */
+export async function getPDIById(
+  pdiId: string
+): Promise<QueryResult<PDIWithEmployee>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('pdis')
+    .select(
+      `
+      *,
+      employees!inner(full_name, department, photo_url)
+    `
+    )
+    .eq('id', pdiId)
+    .single();
+
+  const formattedData = data
+    ? {
+        ...data,
+        objectives: data.objectives || [],
+        employee_name: (data.employees as { full_name: string }).full_name,
+        employee_department: (data.employees as { department: string | null }).department,
+        employee_photo_url: (data.employees as { photo_url: string | null }).photo_url,
+      }
+    : null;
+
+  return {
+    data: formattedData as PDIWithEmployee | null,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Get PDI statistics for dashboard
+ */
+export async function getPDIStats(companyId: string): Promise<{
+  activePDIs: number;
+  completedPDIs: number;
+  averageProgress: number;
+  totalGoals: number;
+  completedGoals: number;
+  pendingEvaluations: number;
+}> {
+  const supabase = createClient();
+
+  const [
+    { count: activePDIs },
+    { count: completedPDIs },
+    { data: progressData },
+    { count: pendingEvaluations },
+  ] = await Promise.all([
+    supabase
+      .from('pdis')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .in('status', ['approved', 'in_progress']),
+    supabase
+      .from('pdis')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('status', 'completed'),
+    supabase
+      .from('pdis')
+      .select('overall_progress, objectives')
+      .eq('company_id', companyId)
+      .in('status', ['approved', 'in_progress']),
+    supabase
+      .from('evaluations')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('status', 'in_progress'),
+  ]);
+
+  // Calculate average progress and goal counts
+  let totalProgress = 0;
+  let totalGoals = 0;
+  let completedGoals = 0;
+
+  progressData?.forEach((pdi) => {
+    totalProgress += pdi.overall_progress || 0;
+    if (pdi.objectives && Array.isArray(pdi.objectives)) {
+      totalGoals += pdi.objectives.length;
+      pdi.objectives.forEach((obj: { status?: string }) => {
+        if (obj.status === 'completed') {
+          completedGoals++;
+        }
+      });
+    }
+  });
+
+  const averageProgress = progressData?.length
+    ? Math.round(totalProgress / progressData.length)
+    : 0;
+
+  return {
+    activePDIs: activePDIs ?? 0,
+    completedPDIs: completedPDIs ?? 0,
+    averageProgress,
+    totalGoals,
+    completedGoals,
+    pendingEvaluations: pendingEvaluations ?? 0,
+  };
+}
+
+/**
+ * Get evaluation cycles for a company
+ */
+export async function listEvaluationCycles(
+  companyId: string,
+  filters?: {
+    status?: string;
+  }
+): Promise<QueryResultArray<{
+  id: string;
+  name: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  total_evaluations: number;
+  completed_evaluations: number;
+}>> {
+  const supabase = createClient();
+
+  let query = supabase
+    .from('evaluation_cycles')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('start_date', { ascending: false });
+
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  const { data: cycles, error } = await query;
+
+  if (error || !cycles) {
+    return {
+      data: null,
+      error: error ? { message: error.message, code: error.code } : null,
+    };
+  }
+
+  // Get evaluation counts for each cycle
+  const cyclesWithCounts = await Promise.all(
+    cycles.map(async (cycle) => {
+      const [{ count: total }, { count: completed }] = await Promise.all([
+        supabase
+          .from('evaluations')
+          .select('*', { count: 'exact', head: true })
+          .eq('cycle_id', cycle.id),
+        supabase
+          .from('evaluations')
+          .select('*', { count: 'exact', head: true })
+          .eq('cycle_id', cycle.id)
+          .eq('status', 'completed'),
+      ]);
+
+      return {
+        id: cycle.id,
+        name: cycle.name,
+        status: cycle.status,
+        start_date: cycle.start_date,
+        end_date: cycle.end_date,
+        total_evaluations: total ?? 0,
+        completed_evaluations: completed ?? 0,
+      };
+    })
+  );
+
+  return {
+    data: cyclesWithCounts,
+    error: null,
+  };
+}
+
+/**
+ * Create a new PDI
+ */
+export async function createPDI(
+  data: {
+    company_id: string;
+    employee_id: string;
+    title: string;
+    description?: string;
+    start_date: string;
+    target_date: string;
+    objectives?: unknown[];
+    mentor_id?: string;
+    created_by?: string;
+  }
+): Promise<QueryResult<PDIWithEmployee>> {
+  const supabase = createClient();
+
+  const { data: created, error } = await supabase
+    .from('pdis')
+    .insert({
+      ...data,
+      status: 'draft',
+      overall_progress: 0,
+      objectives: data.objectives || [],
+    })
+    .select(
+      `
+      *,
+      employees!inner(full_name, department, photo_url)
+    `
+    )
+    .single();
+
+  const formattedData = created
+    ? {
+        ...created,
+        objectives: created.objectives || [],
+        employee_name: (created.employees as { full_name: string }).full_name,
+        employee_department: (created.employees as { department: string | null }).department,
+        employee_photo_url: (created.employees as { photo_url: string | null }).photo_url,
+      }
+    : null;
+
+  return {
+    data: formattedData as PDIWithEmployee | null,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Update PDI progress based on objectives
+ */
+export async function updatePDIProgress(
+  pdiId: string
+): Promise<QueryResult<{ progress: number }>> {
+  const supabase = createClient();
+
+  // Get current PDI
+  const { data: pdi, error: fetchError } = await supabase
+    .from('pdis')
+    .select('objectives')
+    .eq('id', pdiId)
+    .single();
+
+  if (fetchError || !pdi) {
+    return {
+      data: null,
+      error: fetchError ? { message: fetchError.message, code: fetchError.code } : { message: 'PDI not found' },
+    };
+  }
+
+  // Calculate average progress from objectives
+  const objectives = pdi.objectives as { progress?: number }[] || [];
+  const totalProgress = objectives.reduce((acc, obj) => acc + (obj.progress || 0), 0);
+  const averageProgress = objectives.length ? Math.round(totalProgress / objectives.length) : 0;
+
+  // Update PDI
+  const { error: updateError } = await supabase
+    .from('pdis')
+    .update({ overall_progress: averageProgress })
+    .eq('id', pdiId);
+
+  return {
+    data: { progress: averageProgress },
+    error: updateError ? { message: updateError.message, code: updateError.code } : null,
+  };
+}

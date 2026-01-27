@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import {
   Plus,
   Target,
@@ -12,7 +11,9 @@ import {
   MoreHorizontal,
   Eye,
   MessageSquare,
+  Loader2,
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -23,7 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DropdownMenu,
@@ -31,58 +32,42 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  getCurrentProfile,
+  listCompanyPDIs,
+  getPDIStats,
+  listEvaluationCycles,
+  type PDIWithEmployee,
+} from "@/lib/supabase/queries"
+import type { EvaluationCycle } from "@/types/database"
 
-// Placeholder data
-const pdis = [
-  {
-    id: "1",
-    employee: "Maria Silva",
-    title: "Desenvolvimento de Lideranca",
-    progress: 75,
-    status: "active",
-    targetDate: "2024-06-30",
-    goals: 4,
-    completedGoals: 3,
-  },
-  {
-    id: "2",
-    employee: "Joao Santos",
-    title: "Certificacao AWS",
-    progress: 50,
-    status: "active",
-    targetDate: "2024-04-15",
-    goals: 6,
-    completedGoals: 3,
-  },
-  {
-    id: "3",
-    employee: "Pedro Costa",
-    title: "Habilidades de Comunicacao",
-    progress: 25,
-    status: "active",
-    targetDate: "2024-05-20",
-    goals: 5,
-    completedGoals: 1,
-  },
-]
-
-const evaluationCycles = [
-  {
-    id: "1",
-    name: "Avaliacao Q1 2024",
-    status: "in_progress",
-    startDate: "2024-01-15",
-    endDate: "2024-02-15",
-    completed: 45,
-    total: 120,
-  },
-]
+const statusLabels: Record<string, string> = {
+  draft: "Rascunho",
+  active: "Ativo",
+  in_progress: "Em Andamento",
+  completed: "Concluido",
+  cancelled: "Cancelado",
+  on_hold: "Pausado",
+}
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  active: { bg: "bg-green-100", text: "text-green-700" },
   draft: { bg: "bg-gray-100", text: "text-gray-700" },
-  completed: { bg: "bg-blue-100", text: "text-blue-700" },
+  active: { bg: "bg-green-100", text: "text-green-700" },
+  in_progress: { bg: "bg-blue-100", text: "text-blue-700" },
+  completed: { bg: "bg-purple-100", text: "text-purple-700" },
   cancelled: { bg: "bg-red-100", text: "text-red-700" },
+  on_hold: { bg: "bg-yellow-100", text: "text-yellow-700" },
+}
+
+const cycleStatusLabels: Record<string, string> = {
+  draft: "Rascunho",
+  active: "Em Andamento",
+  self_evaluation: "Auto-avaliacao",
+  manager_evaluation: "Avaliacao Gestor",
+  calibration: "Calibracao",
+  feedback: "Feedback",
+  completed: "Concluido",
+  cancelled: "Cancelado",
 }
 
 function ProgressBar({ value }: { value: number }) {
@@ -90,13 +75,71 @@ function ProgressBar({ value }: { value: number }) {
     <div className="h-2 w-full rounded-full bg-muted">
       <div
         className="h-2 rounded-full bg-primary transition-all"
-        style={{ width: `${value}%` }}
+        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
   )
 }
 
 export default function PDIPage() {
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [pdis, setPdis] = React.useState<PDIWithEmployee[]>([])
+  const [cycles, setCycles] = React.useState<EvaluationCycle[]>([])
+  const [stats, setStats] = React.useState({
+    totalPDIs: 0,
+    activePDIs: 0,
+    completedPDIs: 0,
+    averageProgress: 0,
+    totalObjectives: 0,
+    completedObjectives: 0,
+  })
+
+  // Load initial data
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        const profileResult = await getCurrentProfile()
+        if (profileResult.error || !profileResult.data?.company_id) {
+          toast.error("Erro ao carregar perfil")
+          return
+        }
+
+        const companyId = profileResult.data.company_id
+
+        // Load data in parallel
+        const [pdisResult, statsResult, cyclesResult] = await Promise.all([
+          listCompanyPDIs(companyId),
+          getPDIStats(companyId),
+          listEvaluationCycles(companyId),
+        ])
+
+        if (pdisResult.data) {
+          setPdis(pdisResult.data)
+        }
+
+        if (cyclesResult.data) {
+          setCycles(cyclesResult.data)
+        }
+
+        setStats(statsResult)
+      } catch {
+        toast.error("Erro ao carregar dados de PDI")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -128,7 +171,7 @@ export default function PDIPage() {
                 <Target className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pdis.length}</p>
+                <p className="text-2xl font-bold">{stats.activePDIs}</p>
                 <p className="text-sm text-muted-foreground">PDIs ativos</p>
               </div>
             </div>
@@ -141,7 +184,7 @@ export default function PDIPage() {
                 <TrendingUp className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">67%</p>
+                <p className="text-2xl font-bold">{Math.round(stats.averageProgress)}%</p>
                 <p className="text-sm text-muted-foreground">Progresso medio</p>
               </div>
             </div>
@@ -154,8 +197,8 @@ export default function PDIPage() {
                 <Users className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">45</p>
-                <p className="text-sm text-muted-foreground">Avaliacoes pendentes</p>
+                <p className="text-2xl font-bold">{stats.totalPDIs}</p>
+                <p className="text-sm text-muted-foreground">Total de PDIs</p>
               </div>
             </div>
           </CardContent>
@@ -167,7 +210,7 @@ export default function PDIPage() {
                 <Award className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-2xl font-bold">{stats.completedObjectives}</p>
                 <p className="text-sm text-muted-foreground">Metas concluidas</p>
               </div>
             </div>
@@ -193,73 +236,95 @@ export default function PDIPage() {
         </TabsList>
 
         <TabsContent value="pdis">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {pdis.map((pdi) => {
-              const statusStyle = statusColors[pdi.status]
-              return (
-                <Card key={pdi.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-10">
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {pdi.employee
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <CardTitle className="text-base">{pdi.employee}</CardTitle>
-                          <CardDescription className="text-xs">
-                            {pdi.title}
-                          </CardDescription>
+          {pdis.length === 0 ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center text-muted-foreground">
+                  <Target className="mx-auto size-12 mb-4 opacity-20" />
+                  <p>Nenhum PDI cadastrado</p>
+                  <p className="text-sm">Clique em "Novo PDI" para criar</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {pdis.map((pdi) => {
+                const statusStyle = statusColors[pdi.status] || statusColors.draft
+                const completedGoals = pdi.objectives?.filter(o => o.status === 'completed').length || 0
+                const totalGoals = pdi.objectives?.length || 0
+                return (
+                  <Card key={pdi.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-10">
+                            {pdi.employee_photo_url && (
+                              <AvatarImage src={pdi.employee_photo_url} />
+                            )}
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {pdi.employee_name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle className="text-base">{pdi.employee_name}</CardTitle>
+                            <CardDescription className="text-xs">
+                              {pdi.title}
+                            </CardDescription>
+                          </div>
                         </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 size-4" />
+                              Ver detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <MessageSquare className="mr-2 size-4" />
+                              Adicionar check-in
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 size-4" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <MessageSquare className="mr-2 size-4" />
-                            Adicionar check-in
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Progresso</span>
+                          <span className="font-medium">{Math.round(pdi.overall_progress)}%</span>
+                        </div>
+                        <ProgressBar value={pdi.overall_progress} />
+                      </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Progresso</span>
-                        <span className="font-medium">{pdi.progress}%</span>
+                        <span className="text-muted-foreground">
+                          {completedGoals}/{totalGoals} metas
+                        </span>
+                        <Badge className={`${statusStyle.bg} ${statusStyle.text}`}>
+                          {statusLabels[pdi.status] || pdi.status}
+                        </Badge>
                       </div>
-                      <ProgressBar value={pdi.progress} />
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {pdi.completedGoals}/{pdi.goals} metas
-                      </span>
-                      <Badge className={`${statusStyle.bg} ${statusStyle.text}`}>
-                        {pdi.status === "active" ? "Ativo" : pdi.status}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Meta: {new Date(pdi.targetDate).toLocaleDateString("pt-BR")}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                      <div className="text-xs text-muted-foreground">
+                        Meta: {new Date(pdi.target_date).toLocaleDateString("pt-BR")}
+                      </div>
+                      {pdi.employee_department && (
+                        <div className="text-xs text-muted-foreground">
+                          {pdi.employee_department}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="evaluations">
@@ -271,32 +336,36 @@ export default function PDIPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {evaluationCycles.map((cycle) => (
-                <div
-                  key={cycle.id}
-                  className="flex items-center justify-between py-4 border-b last:border-0"
-                >
-                  <div>
-                    <p className="font-medium">{cycle.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(cycle.startDate).toLocaleDateString("pt-BR")} -{" "}
-                      {new Date(cycle.endDate).toLocaleDateString("pt-BR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">
-                        {cycle.completed}/{cycle.total}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Avaliacoes concluidas
+              {cycles.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="mx-auto size-10 opacity-50 mb-2" />
+                  <p>Nenhum ciclo de avaliacao</p>
+                  <Button variant="link" className="mt-2">
+                    Criar ciclo
+                  </Button>
+                </div>
+              ) : (
+                cycles.map((cycle) => (
+                  <div
+                    key={cycle.id}
+                    className="flex items-center justify-between py-4 border-b last:border-0"
+                  >
+                    <div>
+                      <p className="font-medium">{cycle.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(cycle.start_date).toLocaleDateString("pt-BR")} -{" "}
+                        {new Date(cycle.end_date).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
-                    <Badge variant="outline">Em andamento</Badge>
-                    <Button size="sm">Ver</Button>
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline">
+                        {cycleStatusLabels[cycle.status] || cycle.status}
+                      </Badge>
+                      <Button size="sm">Ver</Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </TabsContent>
