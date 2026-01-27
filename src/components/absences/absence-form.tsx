@@ -44,8 +44,8 @@ import type { AbsenceType, VacationBalance, Employee } from "@/types/database"
 const formSchema = z.object({
   employee_id: z.string().min(1, "Selecione um funcionário"),
   type: z.string().min(1, "Selecione o tipo de ausência"),
-  start_date: z.date({ required_error: "Data de início é obrigatória" }),
-  end_date: z.date({ required_error: "Data de fim é obrigatória" }),
+  start_date: z.date({ error: "Data de início é obrigatória" }),
+  end_date: z.date({ error: "Data de fim é obrigatória" }),
   reason: z.string().optional(),
   notes: z.string().optional(),
   document_url: z.string().optional(),
@@ -119,10 +119,10 @@ export function AbsenceForm({
   }, [watchStartDate, watchEndDate])
 
   // Verificar se é tipo médico
-  const isMedicalType = ABSENCE_TYPE_GROUPS.medical.includes(watchType as AbsenceType)
+  const isMedicalType = (ABSENCE_TYPE_GROUPS.medical as readonly string[]).includes(watchType)
 
   // Verificar se é férias
-  const isVacationType = ABSENCE_TYPE_GROUPS.vacation.includes(watchType as AbsenceType)
+  const isVacationType = (ABSENCE_TYPE_GROUPS.vacation as readonly string[]).includes(watchType)
 
   // Saldo de férias do funcionário selecionado
   const employeeVacationBalances = React.useMemo(() => {

@@ -87,7 +87,8 @@ export default function RegisterPage() {
       }
 
       // 2. Create company
-      const { data: company, error: companyError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: company, error: companyError } = await (supabase as any)
         .from("companies")
         .insert({
           name: data.companyName,
@@ -104,7 +105,8 @@ export default function RegisterPage() {
       }
 
       // 3. Update profile with company_id and admin role
-      const { error: profileError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: profileError } = await (supabase as any)
         .from("profiles")
         .update({
           company_id: company.id,

@@ -39,7 +39,16 @@ import {
   listEvaluationCycles,
   type PDIWithEmployee,
 } from "@/lib/supabase/queries"
-import type { EvaluationCycle } from "@/types/database"
+// Tipo simplificado para listagem de ciclos
+interface EvaluationCycleListItem {
+  id: string
+  name: string
+  status: string
+  start_date: string
+  end_date: string
+  total_evaluations: number
+  completed_evaluations: number
+}
 
 const statusLabels: Record<string, string> = {
   draft: "Rascunho",
@@ -84,14 +93,14 @@ function ProgressBar({ value }: { value: number }) {
 export default function PDIPage() {
   const [isLoading, setIsLoading] = React.useState(true)
   const [pdis, setPdis] = React.useState<PDIWithEmployee[]>([])
-  const [cycles, setCycles] = React.useState<EvaluationCycle[]>([])
+  const [cycles, setCycles] = React.useState<EvaluationCycleListItem[]>([])
   const [stats, setStats] = React.useState({
-    totalPDIs: 0,
     activePDIs: 0,
     completedPDIs: 0,
     averageProgress: 0,
-    totalObjectives: 0,
-    completedObjectives: 0,
+    totalGoals: 0,
+    completedGoals: 0,
+    pendingEvaluations: 0,
   })
 
   // Load initial data
@@ -197,7 +206,7 @@ export default function PDIPage() {
                 <Users className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.totalPDIs}</p>
+                <p className="text-2xl font-bold">{pdis.length}</p>
                 <p className="text-sm text-muted-foreground">Total de PDIs</p>
               </div>
             </div>
@@ -210,7 +219,7 @@ export default function PDIPage() {
                 <Award className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.completedObjectives}</p>
+                <p className="text-2xl font-bold">{stats.completedGoals}</p>
                 <p className="text-sm text-muted-foreground">Metas concluidas</p>
               </div>
             </div>

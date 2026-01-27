@@ -11,10 +11,11 @@ export function useAuth() {
   const { user, isLoading, setUser, setLoading, clearUser } = useUserStore()
 
   useEffect(() => {
-    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any
 
     // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string; email: string } } | null } }) => {
       if (session?.user) {
         // Get profile data
         supabase
@@ -22,7 +23,8 @@ export function useAuth() {
           .select("*, companies(name)")
           .eq("id", session.user.id)
           .single()
-          .then(({ data: profile }) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then(({ data: profile }: { data: any }) => {
             if (profile) {
               setUser({
                 id: session.user.id,
@@ -45,7 +47,8 @@ export function useAuth() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
       if (event === "SIGNED_IN" && session?.user) {
         const { data: profile } = await supabase
           .from("profiles")
@@ -76,7 +79,8 @@ export function useAuth() {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = createClient() as any
       setLoading(true)
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -98,7 +102,8 @@ export function useAuth() {
 
   const signUp = useCallback(
     async (email: string, password: string, name: string, companyName: string) => {
-      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = createClient() as any
       setLoading(true)
 
       // 1. Create auth user
@@ -163,14 +168,16 @@ export function useAuth() {
   )
 
   const signOut = useCallback(async () => {
-    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any
     await supabase.auth.signOut()
     clearUser()
     router.push("/login")
   }, [router, clearUser])
 
   const resetPassword = useCallback(async (email: string) => {
-    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,

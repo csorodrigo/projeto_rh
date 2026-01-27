@@ -9,7 +9,7 @@ export const employeeSchema = z.object({
   birthDate: z.string().min(1, "Data de nascimento é obrigatória"),
   gender: z.enum(["male", "female", "other"]),
   maritalStatus: z.enum(["single", "married", "divorced", "widowed", "separated"]),
-  nationality: z.string().default("Brasileira"),
+  nationality: z.string().optional().default("Brasileira"),
 
   // Dados de trabalho
   position: z.string().min(1, "Cargo é obrigatório"),

@@ -139,15 +139,19 @@ export interface PayrollDeduction {
 }
 
 // Table Types
+export type CompanyStatus = 'active' | 'inactive' | 'suspended' | 'trial';
+
 export interface Company {
   id: string;
   name: string;
-  cnpj: string;
-  email: string;
+  cnpj: string | null;
+  email: string | null;
   phone: string | null;
   address: Address | null;
   logo_url: string | null;
   settings: Record<string, unknown>;
+  owner_id: string | null;
+  status: CompanyStatus;
   created_at: string;
   updated_at: string;
 }
@@ -822,8 +826,17 @@ export interface Database {
     Tables: {
       companies: {
         Row: Company;
-        Insert: Omit<Company, 'id' | 'created_at' | 'updated_at'> & {
+        Insert: {
+          name: string;
+          status: CompanyStatus;
           id?: string;
+          cnpj?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          address?: Address | null;
+          logo_url?: string | null;
+          settings?: Record<string, unknown>;
+          owner_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

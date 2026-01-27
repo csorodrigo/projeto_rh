@@ -73,7 +73,7 @@ export default function ConfigPage() {
             cnpj: companyResult.data.cnpj || "",
             email: companyResult.data.email || "",
             phone: companyResult.data.phone || "",
-            cep: address?.cep || "",
+            cep: address?.zip_code || "",
             street: address?.street || "",
             number: address?.number || "",
             city: address?.city || "",
@@ -106,7 +106,7 @@ export default function ConfigPage() {
         email: formData.email,
         phone: formData.phone,
         address: {
-          cep: formData.cep,
+          zip_code: formData.cep,
           street: formData.street,
           number: formData.number,
           city: formData.city,
