@@ -105,16 +105,17 @@ export default function RegisterPage() {
         return
       }
 
-      // 3. Update profile with company_id and admin role
+      // 3. Create/Update profile with company_id and admin role
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: profileError } = await (supabase as any)
         .from("profiles")
-        .update({
+        .upsert({
+          id: user.id,
           company_id: company.id,
+          name: data.name,
+          email: data.email,
           role: "admin",
-          full_name: data.name,
         })
-        .eq("id", user.id)
 
       if (profileError) {
         console.error("Profile update error:", profileError)
