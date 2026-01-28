@@ -57,10 +57,15 @@ export default function PontoPage() {
         return
       }
 
-      // For now, use the profile ID as employee ID (should be linked in profiles table)
-      // In production, you'd have a proper employee_id field in profiles
-      const empId = profileResult.data.id
+      // Use employee_id from profile (FK to employees table)
+      const empId = profileResult.data.employee_id
       const compId = companyResult.data.id
+
+      // Validar se usuário tem employee_id vinculado
+      if (!empId) {
+        toast.error("Funcionário não vinculado. Entre em contato com RH.")
+        return
+      }
 
       setEmployeeId(empId)
       setCompanyId(compId)

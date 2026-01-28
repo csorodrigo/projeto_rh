@@ -96,7 +96,7 @@ const navigationItems: NavigationItem[] = [
     items: [
       { title: "Hoje", url: "/ponto" },
       { title: "Histórico", url: "/ponto/historico" },
-      { title: "Configurações", url: "/ponto/config" },
+      { title: "Configurações", url: "/ponto/configuracoes" },
     ],
   },
   {
@@ -141,7 +141,7 @@ const navigationItems: NavigationItem[] = [
 const settingsItems = [
   {
     title: "Configuracoes",
-    url: "/configuracoes",
+    url: "/config",
     icon: Settings,
   },
 ]
@@ -378,7 +378,7 @@ export function AppSidebar({
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/configuracoes" className="cursor-pointer">
+                  <Link href="/config" className="cursor-pointer">
                     <Settings className="mr-2 size-4" />
                     Configuracoes
                   </Link>

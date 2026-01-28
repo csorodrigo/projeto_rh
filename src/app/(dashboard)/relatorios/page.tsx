@@ -26,6 +26,7 @@ import {
   getCurrentProfile,
   getReportStats,
 } from "@/lib/supabase/queries"
+import { ReportGeneratorDialog } from "@/components/reports/ReportGeneratorDialog"
 
 const reportTypes = [
   {
@@ -34,6 +35,7 @@ const reportTypes = [
     description: "Lista completa com todos os dados dos funcionarios",
     icon: Users,
     color: "bg-blue-100 text-blue-600",
+    disabled: true,
   },
   {
     id: "time_tracking",
@@ -41,6 +43,7 @@ const reportTypes = [
     description: "Relatorio de marcacoes de ponto por periodo",
     icon: Clock,
     color: "bg-green-100 text-green-600",
+    disabled: true,
   },
   {
     id: "overtime",
@@ -48,6 +51,7 @@ const reportTypes = [
     description: "Detalhamento de horas extras por funcionario",
     icon: TrendingUp,
     color: "bg-yellow-100 text-yellow-600",
+    disabled: true,
   },
   {
     id: "absences",
@@ -55,6 +59,7 @@ const reportTypes = [
     description: "Relatorio de faltas, ferias e licencas",
     icon: Calendar,
     color: "bg-purple-100 text-purple-600",
+    disabled: true,
   },
   {
     id: "payroll",
@@ -62,6 +67,7 @@ const reportTypes = [
     description: "Resumo da folha por periodo",
     icon: FileText,
     color: "bg-pink-100 text-pink-600",
+    disabled: true,
   },
   {
     id: "turnover",
@@ -69,11 +75,27 @@ const reportTypes = [
     description: "Analise de rotatividade de funcionarios",
     icon: PieChart,
     color: "bg-red-100 text-red-600",
+    disabled: true,
+  },
+  {
+    id: "aej",
+    title: "Arquivo AEJ",
+    description: "Registro Eletronico de Jornada - Portaria 671 MTE",
+    icon: FileText,
+    color: "bg-indigo-100 text-indigo-600",
+  },
+  {
+    id: "afd",
+    title: "Arquivo AFD",
+    description: "Arquivo Fonte de Dados - Sistema de Ponto Eletronico",
+    icon: FileText,
+    color: "bg-cyan-100 text-cyan-600",
   },
 ]
 
 export default function RelatoriosPage() {
   const [isLoading, setIsLoading] = React.useState(true)
+  const [reportDialog, setReportDialog] = React.useState<"aej" | "afd" | null>(null)
   const [stats, setStats] = React.useState({
     totalEmployees: 0,
     attendanceRate: 0,
@@ -128,17 +150,36 @@ export default function RelatoriosPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {reportTypes.map((report) => {
           const Icon = report.icon
+          const isAEJorAFD = report.id === "aej" || report.id === "afd"
+          const isDisabled = report.disabled ?? false
+
           return (
-            <Card key={report.id} className="hover:border-primary/50 transition-colors cursor-pointer">
+            <Card key={report.id} className="hover:border-primary/50 transition-colors">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className={`rounded-lg p-3 ${report.color}`}>
                     <Icon className="size-5" />
                   </div>
-                  <Button size="sm" variant="outline">
-                    <Download className="mr-2 size-4" />
-                    Gerar
-                  </Button>
+                  {isAEJorAFD ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setReportDialog(report.id as "aej" | "afd")}
+                    >
+                      <Download className="mr-2 size-4" />
+                      Gerar
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isDisabled}
+                      title={isDisabled ? "Em breve" : undefined}
+                    >
+                      <Download className="mr-2 size-4" />
+                      {isDisabled ? "Em breve" : "Gerar"}
+                    </Button>
+                  )}
                 </div>
                 <CardTitle className="mt-4">{report.title}</CardTitle>
                 <CardDescription>{report.description}</CardDescription>
@@ -212,6 +253,13 @@ export default function RelatoriosPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Report Generator Dialog */}
+      <ReportGeneratorDialog
+        reportType={reportDialog}
+        open={!!reportDialog}
+        onOpenChange={(open) => !open && setReportDialog(null)}
+      />
     </div>
   )
 }

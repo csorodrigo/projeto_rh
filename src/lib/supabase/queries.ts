@@ -77,7 +77,7 @@ export async function getCurrentProfile(): Promise<QueryResult<Profile>> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, company_id, name, email, role, employee_id, avatar_url')
     .eq('id', user.id)
     .single();
 

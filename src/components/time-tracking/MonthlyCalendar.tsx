@@ -351,7 +351,7 @@ export function MonthlyCalendar({
           </div>
 
           {/* Calendar Grid */}
-          <div className="rounded-lg border">
+          <div className="rounded-lg border max-w-2xl mx-auto">
             {/* Week Day Headers */}
             <div className="grid grid-cols-7 border-b">
               {weekDays.map((day, index) => (
@@ -396,7 +396,10 @@ export function MonthlyCalendar({
                     <TooltipTrigger asChild>
                       <button
                         className={cn(
-                          "relative aspect-square p-1 text-center transition-colors",
+                          "relative w-full min-h-[48px] sm:min-h-[56px] md:min-h-[64px]",
+                          "aspect-square max-w-[80px]",
+                          "p-1 sm:p-1.5 md:p-2",
+                          "text-center transition-colors",
                           "border-b border-r last:border-r-0 [&:nth-child(7n)]:border-r-0",
                           inCurrentMonth
                             ? config.bgColor

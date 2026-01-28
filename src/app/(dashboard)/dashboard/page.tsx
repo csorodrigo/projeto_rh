@@ -568,7 +568,7 @@ export default function DashboardPage() {
                   label: "Quantidade",
                 },
               }}
-              className="h-[300px]"
+              className="h-[300px] !aspect-auto w-full"
             >
               <PieChart>
                 <Pie

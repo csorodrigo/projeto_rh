@@ -370,7 +370,7 @@ export default function PontoConfiguracoesPage() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-none">
+        <TabsList className="grid w-full grid-cols-4 lg:flex lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Clock className="size-4" />
             <span className="hidden sm:inline">Geral</span>
@@ -609,7 +609,10 @@ export default function PontoConfiguracoesPage() {
 
                     <div>
                       <h4 className="font-medium mb-4">Horarios por Dia</h4>
-                      <Table>
+                      <div className="overflow-x-auto -mx-4 sm:mx-0">
+                        <div className="inline-block min-w-full align-middle">
+                          <div className="overflow-hidden border rounded-lg">
+                            <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Dia</TableHead>
@@ -650,7 +653,7 @@ export default function PontoConfiguracoesPage() {
                                 <TableCell>
                                   <Input
                                     type="time"
-                                    className="w-24"
+                                    className="w-full min-w-[100px] max-w-[120px]"
                                     defaultValue={weekdayData?.start_time || '08:00'}
                                     disabled={!weekdayData?.is_workday && day.value === 'sunday'}
                                     onBlur={(e) => {
@@ -666,7 +669,7 @@ export default function PontoConfiguracoesPage() {
                                 <TableCell>
                                   <Input
                                     type="time"
-                                    className="w-24"
+                                    className="w-full min-w-[100px] max-w-[120px]"
                                     defaultValue={weekdayData?.end_time || '17:00'}
                                     disabled={!weekdayData?.is_workday && day.value === 'sunday'}
                                     onBlur={(e) => {
@@ -682,7 +685,7 @@ export default function PontoConfiguracoesPage() {
                                 <TableCell>
                                   <Input
                                     type="time"
-                                    className="w-24"
+                                    className="w-full min-w-[100px] max-w-[120px]"
                                     defaultValue={weekdayData?.break_start || '12:00'}
                                     disabled={!weekdayData?.is_workday && day.value === 'sunday'}
                                     onBlur={(e) => {
@@ -698,7 +701,7 @@ export default function PontoConfiguracoesPage() {
                                 <TableCell>
                                   <Input
                                     type="time"
-                                    className="w-24"
+                                    className="w-full min-w-[100px] max-w-[120px]"
                                     defaultValue={weekdayData?.break_end || '13:00'}
                                     disabled={!weekdayData?.is_workday && day.value === 'sunday'}
                                     onBlur={(e) => {
@@ -716,6 +719,9 @@ export default function PontoConfiguracoesPage() {
                           })}
                         </TableBody>
                       </Table>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
