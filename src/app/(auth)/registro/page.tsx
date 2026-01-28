@@ -30,11 +30,49 @@ import {
 import { signUp } from "@/lib/supabase/auth"
 import { createClient } from "@/lib/supabase/client"
 
+// Função para validar CNPJ
+function isValidCNPJ(cnpj: string): boolean {
+  cnpj = cnpj.replace(/[^\d]/g, "")
+
+  if (cnpj.length !== 14) return false
+  if (/^(\d)\1+$/.test(cnpj)) return false
+
+  let size = cnpj.length - 2
+  let numbers = cnpj.substring(0, size)
+  const digits = cnpj.substring(size)
+  let sum = 0
+  let pos = size - 7
+
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--
+    if (pos < 2) pos = 9
+  }
+
+  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+  if (result !== parseInt(digits.charAt(0))) return false
+
+  size = size + 1
+  numbers = cnpj.substring(0, size)
+  sum = 0
+  pos = size - 7
+
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--
+    if (pos < 2) pos = 9
+  }
+
+  result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+  return result === parseInt(digits.charAt(1))
+}
+
 const registerSchema = z
   .object({
     name: z.string().min(2, "Nome deve ter no minimo 2 caracteres"),
     email: z.string().email("Email invalido"),
     companyName: z.string().min(2, "Nome da empresa deve ter no minimo 2 caracteres"),
+    cnpj: z.string()
+      .min(1, "CNPJ é obrigatório")
+      .refine((val) => isValidCNPJ(val), "CNPJ inválido"),
     password: z.string().min(6, "Senha deve ter no minimo 6 caracteres"),
     confirmPassword: z.string(),
   })
@@ -55,6 +93,7 @@ export default function RegisterPage() {
       name: "",
       email: "",
       companyName: "",
+      cnpj: "",
       password: "",
       confirmPassword: "",
     },
@@ -95,6 +134,7 @@ export default function RegisterPage() {
         .insert({
           name: data.companyName,
           email: data.email,
+          cnpj: data.cnpj.replace(/[^\d]/g, ""),
           owner_id: user.id,
           status: "active",
         })
@@ -194,6 +234,34 @@ export default function RegisterPage() {
                       placeholder="Minha Empresa LTDA"
                       disabled={isLoading}
                       {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cnpj"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CNPJ</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="00.000.000/0000-00"
+                      disabled={isLoading}
+                      maxLength={18}
+                      {...field}
+                      onChange={(e) => {
+                        let value = e.target.value.replace(/[^\d]/g, "")
+                        if (value.length <= 14) {
+                          value = value.replace(/^(\d{2})(\d)/, "$1.$2")
+                          value = value.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+                          value = value.replace(/\.(\d{3})(\d)/, ".$1/$2")
+                          value = value.replace(/(\d{4})(\d)/, "$1-$2")
+                        }
+                        field.onChange(value)
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
