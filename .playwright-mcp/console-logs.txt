@@ -1,0 +1,3 @@
+[ERROR] Failed to load resource: the server responded with a status of 400 () @ https://lmpyxqvxzigsusjniarz.supabase.co/auth/v1/signup:0
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://lmpyxqvxzigsusjniarz.supabase.co/auth/v1/signup:0
+[ERROR] Failed to load resource: the server responded with a status of 429 () @ https://lmpyxqvxzigsusjniarz.supabase.co/auth/v1/signup:0

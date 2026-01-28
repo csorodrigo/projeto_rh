@@ -1,0 +1,16 @@
+Error: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at rK (https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:46764)
+    at rX (https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:47797)
+    at https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:141516
+    at sp (https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:146677)
+    at sc (https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:138017)
+    at https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:132846
+    at u9 (https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:132947)
+    at sV (https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:159329)
+    at MessagePort.O (https://rh-rickgay.vercel.app/_next/static/chunks/dde2c8e6322d1671.js?dpl=dpl_7c4AQH9UdHxJpK6LN8jTaJEXo8kk:1:8295)
+[ERROR] Failed to load resource: the server responded with a status of 404 () @ https://rh-rickgay.vercel.app/configuracoes?_rsc=181le:0
+[ERROR] Failed to load resource: the server responded with a status of 404 () @ https://rh-rickgay.vercel.app/ponto/config?_rsc=181le:0
+[ERROR] Failed to load resource: the server responded with a status of 406 () @ https://lmpyxqvxzigsusjniarz.supabase.co/rest/v1/time_records?select=record_type%2Crecorded_at&employee_id=eq.17b18969-3127-4097-a7bf-21cb59f2383d&recorded_at=gte.2026-01-28T00%3A00%3A00&recorded_at=lte.2026-01-28T23%3A59%3A59&order=recorded_at.desc&limit=1:0
+[ERROR] Failed to load resource: the server responded with a status of 406 () @ https://lmpyxqvxzigsusjniarz.supabase.co/rest/v1/time_bank?select=balance_after%2Ccreated_at&employee_id=eq.17b18969-3127-4097-a7bf-21cb59f2383d&order=created_at.desc&limit=1:0
+[ERROR] Failed to load resource: the server responded with a status of 406 () @ https://lmpyxqvxzigsusjniarz.supabase.co/rest/v1/time_tracking_daily?select=*&employee_id=eq.17b18969-3127-4097-a7bf-21cb59f2383d&date=eq.2026-01-28:0
+[ERROR] Failed to load resource: the server responded with a status of 400 () @ https://lmpyxqvxzigsusjniarz.supabase.co/rest/v1/employees?select=id%2Cname%2Cfull_name%2Cdepartment%2Cphoto_url&company_id=eq.016aebd3-b2b6-4ef9-997b-49e29108c40f&status=eq.active:0
