@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -106,10 +105,9 @@ export function ReportGeneratorDialog({
           <div className="space-y-2">
             <Label>Período</Label>
             <DateRangePicker
-              date={dateRange}
-              onDateChange={setDateRange}
-              placeholder="Selecione o período"
-              locale={ptBR}
+              value={dateRange}
+              onChange={setDateRange}
+              label="Selecione o período"
             />
           </div>
 
