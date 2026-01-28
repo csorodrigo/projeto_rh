@@ -870,15 +870,6 @@ export interface Database {
         };
         Update: Partial<Omit<EmployeeDocument, 'id' | 'created_at'>>;
       };
-      time_entries: {
-        Row: TimeEntry;
-        Insert: Omit<TimeEntry, 'id' | 'created_at' | 'updated_at'> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<Omit<TimeEntry, 'id' | 'created_at'>>;
-      };
       work_schedules: {
         Row: WorkSchedule;
         Insert: Omit<WorkSchedule, 'id' | 'created_at' | 'updated_at'> & {

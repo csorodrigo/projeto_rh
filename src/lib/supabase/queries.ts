@@ -430,12 +430,12 @@ export async function getEmployeeTimeEntries(
   const supabase = createClient() as any;
 
   const { data, error } = await supabase
-    .from('time_entries')
+    .from('time_tracking_daily')
     .select('*')
     .eq('employee_id', employeeId)
-    .gte('entry_date', startDate)
-    .lte('entry_date', endDate)
-    .order('entry_date', { ascending: false });
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: false });
 
   return {
     data,
@@ -2740,7 +2740,7 @@ export async function getDashboardStats(companyId: string): Promise<DashboardSta
 
   // Get employees who clocked in today
   const { count: presentToday } = await supabase
-    .from('time_entries')
+    .from('time_tracking_daily')
     .select('employee_id', { count: 'exact', head: true })
     .eq('company_id', companyId)
     .eq('date', today)
@@ -2788,15 +2788,15 @@ export async function getRecentActivity(companyId: string, limit: number = 10): 
 
   // Get recent time entries
   const { data: timeEntries } = await supabase
-    .from('time_entries')
+    .from('time_tracking_daily')
     .select(`
       id,
       clock_in,
-      created_at,
+      date,
       employees!inner(full_name)
     `)
     .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
+    .order('date', { ascending: false })
     .limit(3);
 
   if (timeEntries) {
@@ -2942,7 +2942,7 @@ export async function getReportStats(companyId: string): Promise<{
 
   // Calculate attendance rate (days with clock-in / total working days)
   const { count: daysWithAttendance } = await supabase
-    .from('time_entries')
+    .from('time_tracking_daily')
     .select('date', { count: 'exact', head: true })
     .eq('company_id', companyId)
     .gte('date', startOfMonth)
