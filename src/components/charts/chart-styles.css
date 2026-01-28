@@ -1,0 +1,76 @@
+/**
+ * Estilos customizados para componentes de gráficos
+ * Melhorias de acessibilidade e responsividade
+ */
+
+/* Melhorar contraste para tooltips */
+.recharts-tooltip-wrapper {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+/* Animações suaves para gráficos */
+.recharts-surface {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Melhorar foco para acessibilidade */
+.recharts-bar-rectangle:focus,
+.recharts-pie-sector:focus,
+.recharts-line-curve:focus,
+.recharts-area-area:focus {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* Responsividade para labels */
+@media (max-width: 640px) {
+  .recharts-cartesian-axis-tick-value {
+    font-size: 10px !important;
+  }
+
+  .recharts-legend-item-text {
+    font-size: 11px !important;
+  }
+}
+
+/* Dark mode específico para gráficos */
+@media (prefers-color-scheme: dark) {
+  .recharts-cartesian-grid-horizontal line,
+  .recharts-cartesian-grid-vertical line {
+    stroke: #374151;
+  }
+
+  .recharts-text {
+    fill: #9ca3af;
+  }
+}
+
+/* Hover states melhorados */
+.recharts-bar-rectangle:hover,
+.recharts-pie-sector:hover {
+  opacity: 0.8;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Loading skeleton animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.chart-loading {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

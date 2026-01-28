@@ -1,130 +1,232 @@
 "use client"
 
 import * as React from "react"
-import { Users, Play, Coffee, MapPin, UserX } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Users, Coffee, Briefcase, UserX, Loader2 } from "lucide-react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { cn, getInitials } from "@/lib/utils"
 import type { PresenceStatus } from "@/types/database"
 
 interface PresenceListProps {
   presenceData: PresenceStatus[]
   isLoading?: boolean
+  maxDisplay?: number
+  className?: string
 }
 
-const statusConfig: Record<PresenceStatus['status'], { label: string; color: string; icon: React.ElementType }> = {
-  working: { label: "Trabalhando", color: "bg-green-500", icon: Play },
-  break: { label: "Intervalo", color: "bg-yellow-500", icon: Coffee },
-  remote: { label: "Remoto", color: "bg-blue-500", icon: MapPin },
-  absent: { label: "Ausente", color: "bg-gray-400", icon: UserX },
+const statusConfig = {
+  working: {
+    label: "Trabalhando",
+    icon: Briefcase,
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-950",
+    badgeVariant: "default" as const,
+  },
+  break: {
+    label: "Intervalo",
+    icon: Coffee,
+    color: "text-yellow-600 dark:text-yellow-400",
+    bgColor: "bg-yellow-100 dark:bg-yellow-950",
+    badgeVariant: "secondary" as const,
+  },
+  remote: {
+    label: "Remoto",
+    icon: Users,
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-950",
+    badgeVariant: "outline" as const,
+  },
+  absent: {
+    label: "Ausente",
+    icon: UserX,
+    color: "text-gray-600 dark:text-gray-400",
+    bgColor: "bg-gray-100 dark:bg-gray-800",
+    badgeVariant: "secondary" as const,
+  },
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
+export function PresenceList({
+  presenceData,
+  isLoading = false,
+  maxDisplay = 10,
+  className,
+}: PresenceListProps) {
+  const groupedPresence = React.useMemo(() => {
+    const groups: Record<PresenceStatus["status"], PresenceStatus[]> = {
+      working: [],
+      break: [],
+      remote: [],
+      absent: [],
+    }
 
-function formatTime(dateString: string | null): string {
-  if (!dateString) return '--:--'
-  const date = new Date(dateString)
-  return date.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
+    presenceData.forEach((person) => {
+      if (groups[person.status]) {
+        groups[person.status].push(person)
+      }
+    })
 
-export function PresenceList({ presenceData, isLoading = false }: PresenceListProps) {
-  const presentCount = presenceData.filter(p => p.status === 'working' || p.status === 'break').length
+    return groups
+  }, [presenceData])
+
+  const counts = React.useMemo(() => ({
+    working: groupedPresence.working.length,
+    break: groupedPresence.break.length,
+    remote: groupedPresence.remote.length,
+    absent: groupedPresence.absent.length,
+  }), [groupedPresence])
+
+  const formatTime = (dateString: string | null): string => {
+    if (!dateString) return "--:--"
+    const date = new Date(dateString)
+    return date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="size-5" />
-            Quem está na empresa
+            Quem esta trabalhando
           </CardTitle>
-          <CardDescription>Carregando...</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="size-10 rounded-full bg-muted" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-muted rounded w-1/3" />
-                  <div className="h-3 bg-muted rounded w-1/4" />
-                </div>
-              </div>
-            ))}
-          </div>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="size-5" />
-              Quem está na empresa
-            </CardTitle>
-            <CardDescription>Colaboradores presentes agora</CardDescription>
-          </div>
-          <Badge variant="secondary">
-            {presentCount} presente{presentCount !== 1 ? 's' : ''}
-          </Badge>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="size-5" aria-hidden="true" />
+          Quem esta trabalhando
+        </CardTitle>
+        <CardDescription>
+          {counts.working + counts.break + counts.remote} colaboradores ativos
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        {presenceData.length === 0 ? (
-          <div className="text-center py-4 text-muted-foreground">
-            Nenhum funcionário ativo encontrado
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {presenceData.map((person) => {
-              const config = statusConfig[person.status]
+      <CardContent className="space-y-4">
+        {/* Status Counters */}
+        <div
+          className="grid grid-cols-4 gap-2"
+          role="list"
+          aria-label="Contadores de status"
+        >
+          {(Object.keys(statusConfig) as Array<keyof typeof statusConfig>).map(
+            (status) => {
+              const config = statusConfig[status]
               const Icon = config.icon
               return (
                 <div
-                  key={person.employee_id}
-                  className="flex items-center justify-between py-2"
+                  key={status}
+                  className={cn(
+                    "flex flex-col items-center rounded-lg p-2",
+                    config.bgColor
+                  )}
+                  role="listitem"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Avatar className="size-10">
-                        <AvatarImage src={person.photo_url || undefined} />
-                        <AvatarFallback>{getInitials(person.employee_name)}</AvatarFallback>
-                      </Avatar>
-                      <div className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-background ${config.color}`} />
-                    </div>
-                    <div>
-                      <span className="font-medium">{person.employee_name}</span>
-                      {person.department && (
-                        <p className="text-xs text-muted-foreground">{person.department}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Icon className="size-3" />
-                    <span>{config.label}</span>
-                    {person.clock_in && person.status !== 'absent' && (
-                      <span>desde {formatTime(person.clock_in)}</span>
-                    )}
-                  </div>
+                  <Icon
+                    className={cn("size-4", config.color)}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className={cn("text-lg font-bold tabular-nums", config.color)}
+                    aria-label={`${counts[status]} ${config.label.toLowerCase()}`}
+                  >
+                    {counts[status]}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground truncate max-w-full">
+                    {config.label}
+                  </span>
                 </div>
               )
-            })}
-          </div>
-        )}
+            }
+          )}
+        </div>
+
+        <Separator />
+
+        {/* People List */}
+        <div className="space-y-3">
+          {(["working", "break", "remote"] as const).map((status) => {
+            const people = groupedPresence[status]
+            if (people.length === 0) return null
+
+            const config = statusConfig[status]
+            const displayPeople = people.slice(0, maxDisplay)
+            const remaining = people.length - maxDisplay
+
+            return (
+              <div key={status} className="space-y-2">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <span
+                    className={cn("size-2 rounded-full", config.bgColor)}
+                    aria-hidden="true"
+                  />
+                  {config.label} ({people.length})
+                </h4>
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="list"
+                  aria-label={`Lista de ${config.label.toLowerCase()}`}
+                >
+                  {displayPeople.map((person) => (
+                    <div
+                      key={person.employee_id}
+                      className="flex items-center gap-2 rounded-lg bg-muted/50 px-2 py-1"
+                      role="listitem"
+                    >
+                      <Avatar size="sm">
+                        {person.photo_url && (
+                          <AvatarImage
+                            src={person.photo_url}
+                            alt={person.employee_name}
+                          />
+                        )}
+                        <AvatarFallback>
+                          {getInitials(person.employee_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium truncate max-w-[100px]">
+                          {person.employee_name.split(" ")[0]}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatTime(person.clock_in)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {remaining > 0 && (
+                    <Badge variant="outline" className="self-center">
+                      +{remaining}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+
+          {counts.working + counts.break + counts.remote === 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              Nenhum colaborador ativo no momento
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

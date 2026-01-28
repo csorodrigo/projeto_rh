@@ -2,14 +2,16 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Bell,
   Search,
   Settings,
   User,
   LogOut,
-  ChevronRight,
+  UserPlus,
+  Clock,
+  Plus,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -27,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Breadcrumb } from "@/components/ui/breadcrumb"
 
 const routeLabels: Record<string, string> = {
   dashboard: "Dashboard",
@@ -56,6 +59,10 @@ export function Header({
   },
 }: HeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [showSearch, setShowSearch] = React.useState(false)
+
   const [notifications] = React.useState([
     {
       id: 1,
@@ -63,6 +70,7 @@ export function Header({
       description: "3 funcionarios com ASO vencendo esta semana",
       time: "2h",
       unread: true,
+      type: "warning" as const,
     },
     {
       id: 2,
@@ -70,6 +78,7 @@ export function Header({
       description: "Maria Silva teve ferias aprovadas",
       time: "5h",
       unread: true,
+      type: "success" as const,
     },
     {
       id: 3,
@@ -77,6 +86,7 @@ export function Header({
       description: "Joao Santos foi cadastrado",
       time: "1d",
       unread: false,
+      type: "info" as const,
     },
   ])
 
@@ -89,7 +99,7 @@ export function Header({
     let currentPath = ""
     for (const segment of segments) {
       currentPath += `/${segment}`
-      const label = routeLabels[segment] || segment
+      const label = routeLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
       breadcrumbs.push({ label, href: currentPath })
     }
 
@@ -98,48 +108,96 @@ export function Header({
 
   const breadcrumbs = getBreadcrumbs()
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/busca?q=${encodeURIComponent(searchQuery)}`)
+    }
+  }
+
+  const quickActions = [
+    {
+      icon: UserPlus,
+      label: "Novo Funcionário",
+      href: "/funcionarios/novo",
+    },
+    {
+      icon: Clock,
+      label: "Registrar Ponto",
+      href: "/ponto/registro",
+    },
+  ]
+
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 h-4" />
 
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm">
-        {breadcrumbs.map((crumb, index) => (
-          <React.Fragment key={crumb.href}>
-            {index > 0 && (
-              <ChevronRight className="size-4 text-muted-foreground" />
-            )}
-            {index === breadcrumbs.length - 1 ? (
-              <span className="font-medium text-foreground">{crumb.label}</span>
-            ) : (
-              <Link
-                href={crumb.href}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {crumb.label}
-              </Link>
-            )}
-          </React.Fragment>
-        ))}
-      </nav>
+      <Breadcrumb items={breadcrumbs} className="hidden sm:flex" />
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Search */}
-        <div className="relative hidden md:block">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar..."
-            className="w-64 pl-8"
-          />
-        </div>
+        {/* Quick Actions */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="default" size="sm" className="hidden md:flex gap-2">
+              <Plus className="size-4" />
+              Novo
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {quickActions.map((action) => (
+              <DropdownMenuItem key={action.href} asChild>
+                <Link href={action.href} className="cursor-pointer flex items-center">
+                  <action.icon className="mr-2 size-4" />
+                  {action.label}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Mobile Search Button */}
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Search className="size-4" />
-          <span className="sr-only">Buscar</span>
-        </Button>
+        {/* Search */}
+        {showSearch ? (
+          <form onSubmit={handleSearch} className="relative md:w-64 w-48">
+            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar..."
+              className="pl-8 pr-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+              onBlur={() => {
+                if (!searchQuery) setShowSearch(false)
+              }}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-full"
+              onClick={() => {
+                setSearchQuery("")
+                setShowSearch(false)
+              }}
+            >
+              <span className="sr-only">Fechar busca</span>
+              ×
+            </Button>
+          </form>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSearch(true)}
+          >
+            <Search className="size-4" />
+            <span className="sr-only">Buscar</span>
+          </Button>
+        )}
 
         {/* Notifications */}
         <DropdownMenu>
@@ -149,7 +207,7 @@ export function Header({
               {unreadCount > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -right-1 -top-1 size-5 justify-center rounded-full p-0 text-xs"
+                  className="absolute -right-1 -top-1 size-5 justify-center rounded-full p-0 text-[10px] animate-pulse"
                 >
                   {unreadCount}
                 </Badge>
@@ -157,9 +215,9 @@ export function Header({
               <span className="sr-only">Notificacoes</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Notificacoes</span>
+          <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto">
+            <DropdownMenuLabel className="flex items-center justify-between sticky top-0 bg-background z-10">
+              <span>Notificações</span>
               {unreadCount > 0 && (
                 <Badge variant="secondary" className="text-xs">
                   {unreadCount} novas
@@ -172,34 +230,47 @@ export function Header({
                 {notifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
-                    className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+                    className={cn(
+                      "flex flex-col items-start gap-1 p-3 cursor-pointer",
+                      notification.unread && "bg-accent/50"
+                    )}
                   >
-                    <div className="flex w-full items-center justify-between">
-                      <span
-                        className={cn(
-                          "font-medium",
-                          notification.unread && "text-primary"
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {notification.unread && (
+                          <span className="size-2 rounded-full bg-primary shrink-0" />
                         )}
-                      >
-                        {notification.title}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
+                        <span
+                          className={cn(
+                            "font-medium text-sm",
+                            notification.unread && "text-primary"
+                          )}
+                        >
+                          {notification.title}
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">
                         {notification.time}
                       </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground pl-4">
                       {notification.description}
                     </span>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="justify-center text-primary cursor-pointer">
-                  Ver todas as notificacoes
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/notificacoes"
+                    className="justify-center text-primary cursor-pointer font-medium"
+                  >
+                    Ver todas as notificações
+                  </Link>
                 </DropdownMenuItem>
               </>
             ) : (
               <div className="p-4 text-center text-sm text-muted-foreground">
-                Nenhuma notificacao
+                Nenhuma notificação
               </div>
             )}
           </DropdownMenuContent>

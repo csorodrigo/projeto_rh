@@ -82,15 +82,15 @@ CREATE INDEX IF NOT EXISTS idx_employees_company_active
   WHERE status = 'active';
 
 -- Indice para dashboard de ponto (periodo)
+-- Nota: Removido filtro com CURRENT_DATE pois nao e IMMUTABLE
 CREATE INDEX IF NOT EXISTS idx_time_tracking_dashboard
-  ON time_tracking_daily (company_id, date, status)
-  WHERE date >= CURRENT_DATE - INTERVAL '30 days';
+  ON time_tracking_daily (company_id, date, status);
 
 -- Indice para ausencias proximas
+-- Nota: Removido filtro com CURRENT_DATE pois nao e IMMUTABLE
 CREATE INDEX IF NOT EXISTS idx_absences_upcoming
   ON absences (company_id, start_date, status)
-  WHERE start_date >= CURRENT_DATE
-  AND status IN ('approved', 'pending');
+  WHERE status IN ('approved', 'pending');
 
 -- Indice para avaliacoes pendentes
 CREATE INDEX IF NOT EXISTS idx_evaluations_pending_evaluator
@@ -228,7 +228,7 @@ CREATE OR REPLACE FUNCTION report_headcount(
 )
 RETURNS TABLE (
   department TEXT,
-  position TEXT,
+  "position" TEXT,
   total_employees BIGINT,
   active_employees BIGINT,
   on_leave BIGINT,
@@ -239,7 +239,7 @@ BEGIN
   RETURN QUERY
   SELECT
     e.department,
-    e.position,
+    e."position",
     COUNT(*)::BIGINT,
     COUNT(*) FILTER (WHERE e.status = 'active')::BIGINT,
     COUNT(*) FILTER (WHERE e.status = 'on_leave')::BIGINT,
@@ -248,8 +248,8 @@ BEGIN
   FROM employees e
   WHERE e.company_id = p_company_id
   AND e.status IN ('active', 'on_leave')
-  GROUP BY e.department, e.position
-  ORDER BY e.department, e.position;
+  GROUP BY e.department, e."position"
+  ORDER BY e.department, e."position";
 END;
 $$ LANGUAGE plpgsql;
 

@@ -5,24 +5,12 @@ import {
   Building2,
   Users,
   Clock,
-  Bell,
-  Shield,
-  Save,
+  Calendar,
+  Smartphone,
+  CreditCard,
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   getCurrentProfile,
@@ -30,14 +18,18 @@ import {
   updateCompanyData,
 } from "@/lib/supabase/queries"
 import type { Company, Address } from "@/types/database"
+import { CompanySettings } from "@/components/config/company-settings"
+import { ScheduleSettings } from "@/components/config/schedule-settings"
+import { CalendarSettings } from "@/components/config/calendar-settings"
+import { UsersSettings } from "@/components/config/users-settings"
+import { DevicesSettings } from "@/components/config/devices-settings"
+import { PlanSettings } from "@/components/config/plan-settings"
 
 export default function ConfigPage() {
   const [isLoading, setIsLoading] = React.useState(true)
-  const [isSaving, setIsSaving] = React.useState(false)
   const [companyId, setCompanyId] = React.useState<string | null>(null)
   const [company, setCompany] = React.useState<Company | null>(null)
 
-  // Form state
   const [formData, setFormData] = React.useState({
     name: "",
     cnpj: "",
@@ -48,9 +40,10 @@ export default function ConfigPage() {
     number: "",
     city: "",
     state: "",
+    complement: "",
+    neighborhood: "",
   })
 
-  // Load company data
   React.useEffect(() => {
     async function loadData() {
       try {
@@ -78,6 +71,8 @@ export default function ConfigPage() {
             number: address?.number || "",
             city: address?.city || "",
             state: address?.state || "",
+            complement: address?.complement || "",
+            neighborhood: address?.neighborhood || "",
           })
         }
       } catch {
@@ -90,42 +85,33 @@ export default function ConfigPage() {
     loadData()
   }, [])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target
-    setFormData(prev => ({ ...prev, [id]: value }))
-  }
-
-  const handleSaveCompany = async () => {
+  const handleSaveCompany = async (data: typeof formData) => {
     if (!companyId) return
 
-    setIsSaving(true)
     try {
       const result = await updateCompanyData(companyId, {
-        name: formData.name,
-        cnpj: formData.cnpj,
-        email: formData.email,
-        phone: formData.phone,
+        name: data.name,
+        cnpj: data.cnpj,
+        email: data.email,
+        phone: data.phone,
         address: {
-          zip_code: formData.cep,
-          street: formData.street,
-          number: formData.number,
-          city: formData.city,
-          state: formData.state,
-          neighborhood: "",
-          complement: "",
+          zip_code: data.cep,
+          street: data.street,
+          number: data.number,
+          city: data.city,
+          state: data.state,
+          neighborhood: data.neighborhood || "",
+          complement: data.complement || "",
         },
       })
 
       if (result.error) {
-        toast.error("Erro ao salvar: " + result.error.message)
-      } else {
-        toast.success("Dados salvos com sucesso!")
-        setCompany(result.data)
+        throw new Error(result.error.message)
       }
-    } catch {
-      toast.error("Erro ao salvar dados")
-    } finally {
-      setIsSaving(false)
+
+      setCompany(result.data)
+    } catch (error) {
+      throw error
     }
   }
 
@@ -141,287 +127,67 @@ export default function ConfigPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configuracoes</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Gerencie as configuracoes do sistema
+          Gerencie as configurações do sistema e da empresa
         </p>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="company" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-none">
+      <Tabs defaultValue="company" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 lg:w-auto">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="size-4" />
             <span className="hidden sm:inline">Empresa</span>
           </TabsTrigger>
+          <TabsTrigger value="schedule" className="gap-2">
+            <Clock className="size-4" />
+            <span className="hidden sm:inline">Horários</span>
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <Calendar className="size-4" />
+            <span className="hidden sm:inline">Calendários</span>
+          </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <Users className="size-4" />
-            <span className="hidden sm:inline">Usuarios</span>
+            <span className="hidden sm:inline">Usuários</span>
           </TabsTrigger>
-          <TabsTrigger value="time" className="gap-2">
-            <Clock className="size-4" />
-            <span className="hidden sm:inline">Ponto</span>
+          <TabsTrigger value="devices" className="gap-2">
+            <Smartphone className="size-4" />
+            <span className="hidden sm:inline">Dispositivos</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2">
-            <Bell className="size-4" />
-            <span className="hidden sm:inline">Notificacoes</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
-            <Shield className="size-4" />
-            <span className="hidden sm:inline">Seguranca</span>
+          <TabsTrigger value="plan" className="gap-2">
+            <CreditCard className="size-4" />
+            <span className="hidden sm:inline">Plano</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="company">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados da Empresa</CardTitle>
-              <CardDescription>
-                Informacoes cadastrais da sua empresa
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Empresa</Label>
-                  <Input
-                    id="name"
-                    placeholder="Minha Empresa LTDA"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input
-                    id="cnpj"
-                    placeholder="00.000.000/0000-00"
-                    value={formData.cnpj}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="contato@empresa.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    placeholder="(00) 0000-0000"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-4">Endereco</h4>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="cep">CEP</Label>
-                    <Input
-                      id="cep"
-                      placeholder="00000-000"
-                      value={formData.cep}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="street">Rua</Label>
-                    <Input
-                      id="street"
-                      placeholder="Rua Example"
-                      value={formData.street}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="number">Numero</Label>
-                    <Input
-                      id="number"
-                      placeholder="123"
-                      value={formData.number}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city">Cidade</Label>
-                    <Input
-                      id="city"
-                      placeholder="Sao Paulo"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">Estado</Label>
-                    <Input
-                      id="state"
-                      placeholder="SP"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={handleSaveCompany} disabled={isSaving}>
-                  {isSaving ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 size-4" />
-                  )}
-                  Salvar Alteracoes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="company" className="space-y-4">
+          <CompanySettings
+            companyId={companyId}
+            initialData={formData}
+            onSave={handleSaveCompany}
+          />
         </TabsContent>
 
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gerenciamento de Usuarios</CardTitle>
-              <CardDescription>
-                Gerencie os usuarios com acesso ao sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="mx-auto size-10 opacity-50 mb-2" />
-                <p>Gestao de usuarios</p>
-                <Button variant="link" className="mt-2">
-                  Convidar usuario
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="schedule" className="space-y-4">
+          <ScheduleSettings />
         </TabsContent>
 
-        <TabsContent value="time">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuracoes de Ponto</CardTitle>
-              <CardDescription>
-                Configure as regras de marcacao de ponto
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Tolerancia de Atraso (minutos)</Label>
-                  <Input type="number" defaultValue="10" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Intervalo Minimo (minutos)</Label>
-                  <Input type="number" defaultValue="60" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Hora Extra - Inicio (minutos apos)</Label>
-                  <Input type="number" defaultValue="30" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Hora Noturna - Inicio</Label>
-                  <Input type="time" defaultValue="22:00" />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button>
-                  <Save className="mr-2 size-4" />
-                  Salvar Configuracoes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="calendar" className="space-y-4">
+          <CalendarSettings />
         </TabsContent>
 
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notificacoes</CardTitle>
-              <CardDescription>
-                Configure os alertas do sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">ASO Vencendo</p>
-                    <p className="text-sm text-muted-foreground">
-                      Alerta quando ASO esta proximo do vencimento
-                    </p>
-                  </div>
-                  <Input type="number" className="w-20" defaultValue="30" />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Aniversarios</p>
-                    <p className="text-sm text-muted-foreground">
-                      Notificar sobre aniversarios de funcionarios
-                    </p>
-                  </div>
-                  <Input type="checkbox" className="w-5 h-5" defaultChecked />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Aprovacoes Pendentes</p>
-                    <p className="text-sm text-muted-foreground">
-                      Lembrete de aprovacoes de ferias/ponto
-                    </p>
-                  </div>
-                  <Input type="checkbox" className="w-5 h-5" defaultChecked />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="users" className="space-y-4">
+          <UsersSettings />
         </TabsContent>
 
-        <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle>Seguranca</CardTitle>
-              <CardDescription>
-                Configuracoes de seguranca e privacidade
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Autenticacao em Duas Etapas</p>
-                    <p className="text-sm text-muted-foreground">
-                      Exigir 2FA para todos os usuarios
-                    </p>
-                  </div>
-                  <Input type="checkbox" className="w-5 h-5" />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Logs de Acesso</p>
-                    <p className="text-sm text-muted-foreground">
-                      Registrar todas as acoes no sistema
-                    </p>
-                  </div>
-                  <Input type="checkbox" className="w-5 h-5" defaultChecked />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="devices" className="space-y-4">
+          <DevicesSettings />
+        </TabsContent>
+
+        <TabsContent value="plan" className="space-y-4">
+          <PlanSettings />
         </TabsContent>
       </Tabs>
     </div>

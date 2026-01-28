@@ -69,6 +69,9 @@ CREATE TABLE companies (
   -- Status
   status company_status DEFAULT 'active' NOT NULL,
 
+  -- Owner (usuario que criou a empresa)
+  owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+
   -- Auditoria
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -79,6 +82,7 @@ CREATE INDEX idx_companies_cnpj ON companies (cnpj);
 CREATE INDEX idx_companies_status ON companies (status);
 CREATE INDEX idx_companies_plan ON companies (plan);
 CREATE INDEX idx_companies_name ON companies USING gin (name gin_trgm_ops);
+CREATE INDEX idx_companies_owner_id ON companies (owner_id);
 
 -- Trigger para updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

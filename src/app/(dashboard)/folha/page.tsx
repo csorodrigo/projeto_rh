@@ -11,8 +11,10 @@ import {
   Calendar,
   ChevronDown,
   Loader2,
+  Eye,
 } from "lucide-react"
 import { toast } from "sonner"
+import { ColumnDef } from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -22,15 +24,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +38,8 @@ import {
   generatePayrollForPeriod,
   type EmployeePayrollWithEmployee,
 } from "@/lib/supabase/queries"
+import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table"
+import { QuickStatusBadge, type StatusKey } from "@/components/ui/status-badge"
 import type { PayrollPeriod, PayrollStatus } from "@/types/database"
 
 const formatCurrency = (value: number) => {
@@ -55,42 +50,20 @@ const formatCurrency = (value: number) => {
 }
 
 const months = [
-  "Janeiro",
-  "Fevereiro",
-  "Marco",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ]
 
-const statusLabels: Record<PayrollStatus, string> = {
-  draft: "Rascunho",
-  calculating: "Calculando",
-  calculated: "Calculado",
-  review: "Revisao",
-  approved: "Aprovado",
-  processing: "Processando",
-  paid: "Pago",
-  exported: "Exportado",
-  cancelled: "Cancelado",
-}
-
-const statusVariant: Record<PayrollStatus, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "secondary",
-  calculating: "outline",
-  calculated: "outline",
-  review: "outline",
-  approved: "default",
-  processing: "outline",
-  paid: "default",
-  exported: "default",
-  cancelled: "destructive",
+const statusMap: Record<PayrollStatus, StatusKey> = {
+  draft: "draft",
+  calculating: "calculating",
+  calculated: "calculated",
+  review: "review",
+  approved: "approved",
+  processing: "processing",
+  paid: "paid",
+  exported: "exported",
+  cancelled: "cancelled",
 }
 
 export default function FolhaPage() {
@@ -110,23 +83,19 @@ export default function FolhaPage() {
     periodStatus: null as PayrollStatus | null,
   })
 
-  // Load data for selected month/year
   const loadData = React.useCallback(async (compId: string, year: number, month: number) => {
     setIsLoading(true)
     try {
-      // Get or create period
       const periodResult = await getOrCreatePayrollPeriod(compId, year, month + 1)
       if (periodResult.data) {
         setPeriod(periodResult.data)
 
-        // Load payrolls for this period
         const payrollsResult = await listEmployeePayrolls(periodResult.data.id)
         if (payrollsResult.data) {
           setPayrolls(payrollsResult.data)
         }
       }
 
-      // Load stats
       const statsResult = await getPayrollStats(compId, year, month + 1)
       setStats(statsResult)
     } catch {
@@ -136,7 +105,6 @@ export default function FolhaPage() {
     }
   }, [])
 
-  // Initial load
   React.useEffect(() => {
     async function init() {
       try {
@@ -157,9 +125,8 @@ export default function FolhaPage() {
     }
 
     init()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Reload when month/year changes
   React.useEffect(() => {
     if (companyId) {
       loadData(companyId, selectedYear, selectedMonth)
@@ -175,11 +142,10 @@ export default function FolhaPage() {
       if (result.error) {
         toast.error("Erro ao calcular folha: " + result.error.message)
       } else if (result.data) {
-        toast.success(`Folha calculada: ${result.data.processed} funcionarios processados`)
+        toast.success(`Folha calculada: ${result.data.processed} funcionários processados`)
         if (result.data.errors.length > 0) {
           toast.warning(`${result.data.errors.length} erros encontrados`)
         }
-        // Reload data
         await loadData(companyId, selectedYear, selectedMonth)
       }
     } catch {
@@ -188,6 +154,93 @@ export default function FolhaPage() {
       setIsCalculating(false)
     }
   }
+
+  const columns: ColumnDef<EmployeePayrollWithEmployee>[] = [
+    {
+      accessorKey: "employee_name",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Funcionário" />,
+      cell: ({ row }) => {
+        const name = row.getValue("employee_name") as string
+        const department = row.original.employee_department
+        return (
+          <div>
+            <p className="font-medium">{name}</p>
+            {department && (
+              <p className="text-xs text-muted-foreground">{department}</p>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "base_salary",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Salário Base" />,
+      cell: ({ row }) => (
+        <span className="font-medium">{formatCurrency(row.getValue("base_salary"))}</span>
+      ),
+    },
+    {
+      id: "overtime",
+      header: "Horas Extras",
+      cell: ({ row }) => {
+        const overtime = (row.original.overtime_50_value || 0) + (row.original.overtime_100_value || 0)
+        return (
+          <span className="text-green-600 font-medium">
+            +{formatCurrency(overtime)}
+          </span>
+        )
+      },
+    },
+    {
+      id: "bonuses",
+      header: "Bônus",
+      cell: ({ row }) => {
+        const overtime = (row.original.overtime_50_value || 0) + (row.original.overtime_100_value || 0)
+        const bonuses = row.original.total_earnings - row.original.base_salary - overtime
+        return (
+          <span className="text-green-600 font-medium">
+            +{formatCurrency(Math.max(0, bonuses))}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "total_deductions",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Descontos" />,
+      cell: ({ row }) => (
+        <span className="text-red-600 font-medium">
+          -{formatCurrency(row.getValue("total_deductions"))}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "net_salary",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Líquido" />,
+      cell: ({ row }) => (
+        <span className="font-bold text-lg">
+          {formatCurrency(row.getValue("net_salary"))}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      cell: ({ row }) => {
+        const status = row.getValue("status") as PayrollStatus
+        const statusKey = statusMap[status]
+        return <QuickStatusBadge status={statusKey} />
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <Button size="sm" variant="outline">
+          <Eye className="mr-2 size-4" />
+          Detalhes
+        </Button>
+      ),
+    },
+  ]
 
   if (isLoading) {
     return (
@@ -204,7 +257,7 @@ export default function FolhaPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Folha de Pagamento</h1>
           <p className="text-muted-foreground">
-            Gestao de proventos e descontos
+            Gestão de proventos e descontos
           </p>
         </div>
         <div className="flex gap-2">
@@ -242,27 +295,17 @@ export default function FolhaPage() {
         </div>
       </div>
 
-      {/* Period Status */}
-      {period && stats.periodStatus && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Status do periodo:</span>
-          <Badge variant={statusVariant[stats.periodStatus]}>
-            {statusLabels[stats.periodStatus]}
-          </Badge>
-        </div>
-      )}
-
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="bg-green-100 text-green-600 rounded-lg p-3">
+              <div className="bg-green-100 text-green-600 rounded-lg p-3 dark:bg-green-900/30">
                 <DollarSign className="size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{formatCurrency(stats.totalNetSalary)}</p>
-                <p className="text-sm text-muted-foreground">Total liquido</p>
+                <p className="text-sm text-muted-foreground">Total líquido</p>
               </div>
             </div>
           </CardContent>
@@ -270,12 +313,12 @@ export default function FolhaPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="bg-blue-100 text-blue-600 rounded-lg p-3">
+              <div className="bg-blue-100 text-blue-600 rounded-lg p-3 dark:bg-blue-900/30">
                 <Users className="size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.totalEmployees}</p>
-                <p className="text-sm text-muted-foreground">Funcionarios</p>
+                <p className="text-sm text-muted-foreground">Funcionários</p>
               </div>
             </div>
           </CardContent>
@@ -283,7 +326,7 @@ export default function FolhaPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="bg-yellow-100 text-yellow-600 rounded-lg p-3">
+              <div className="bg-yellow-100 text-yellow-600 rounded-lg p-3 dark:bg-yellow-900/30">
                 <TrendingUp className="size-5" />
               </div>
               <div>
@@ -296,12 +339,12 @@ export default function FolhaPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="bg-purple-100 text-purple-600 rounded-lg p-3">
+              <div className="bg-purple-100 text-purple-600 rounded-lg p-3 dark:bg-purple-900/30">
                 <FileText className="size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{formatCurrency(stats.totalBonuses)}</p>
-                <p className="text-sm text-muted-foreground">Bonus/Comissoes</p>
+                <p className="text-sm text-muted-foreground">Bônus/Comissões</p>
               </div>
             </div>
           </CardContent>
@@ -313,99 +356,43 @@ export default function FolhaPage() {
         <CardHeader>
           <CardTitle>Folha de {months[selectedMonth]}/{selectedYear}</CardTitle>
           <CardDescription>
-            Detalhamento de proventos e descontos por funcionario
+            Detalhamento de proventos e descontos por funcionário
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {payrolls.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <DollarSign className="mx-auto size-12 mb-4 opacity-20" />
-              <p>Nenhuma folha calculada para este periodo</p>
-              <p className="text-sm">Clique em "Calcular Folha" para processar</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Funcionario</TableHead>
-                  <TableHead className="text-right">Salario Base</TableHead>
-                  <TableHead className="text-right">Horas Extras</TableHead>
-                  <TableHead className="text-right">Bonus</TableHead>
-                  <TableHead className="text-right">Descontos</TableHead>
-                  <TableHead className="text-right">Liquido</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payrolls.map((row) => {
-                  const overtime = (row.overtime_50_value || 0) + (row.overtime_100_value || 0)
-                  const bonuses = row.total_earnings - row.base_salary - overtime
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">
-                        {row.employee_name}
-                        {row.employee_department && (
-                          <p className="text-xs text-muted-foreground">
-                            {row.employee_department}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(row.base_salary)}
-                      </TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +{formatCurrency(overtime)}
-                      </TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +{formatCurrency(Math.max(0, bonuses))}
-                      </TableCell>
-                      <TableCell className="text-right text-red-600">
-                        -{formatCurrency(row.total_deductions)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {formatCurrency(row.net_salary)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant[row.status]}>
-                          {statusLabels[row.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="outline">
-                          Detalhes
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
+          <DataTable
+            columns={columns}
+            data={payrolls}
+            searchKey="employee_name"
+            searchPlaceholder="Buscar funcionário..."
+            emptyMessage="Nenhuma folha calculada para este período"
+            emptyDescription="Clique em 'Calcular Folha' para processar"
+            emptyIcon={<DollarSign className="size-12 text-muted-foreground opacity-20" />}
+          />
         </CardContent>
       </Card>
 
       {/* Export Options */}
       <Card>
         <CardHeader>
-          <CardTitle>Exportacao</CardTitle>
+          <CardTitle>Exportação</CardTitle>
           <CardDescription>
-            Exporte os dados para sistemas contabeis
+            Exporte os dados para sistemas contábeis
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <Button variant="outline" className="h-auto py-4 flex-col gap-2">
               <FileText className="size-6" />
-              <span>Contabil Phoenix</span>
+              <span>Contábil Phoenix</span>
             </Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2">
               <FileText className="size-6" />
-              <span>Dominio Sistemas</span>
+              <span>Domínio Sistemas</span>
             </Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2">
               <FileText className="size-6" />
-              <span>CSV Generico</span>
+              <span>CSV Genérico</span>
             </Button>
           </div>
         </CardContent>

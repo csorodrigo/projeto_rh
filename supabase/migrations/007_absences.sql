@@ -636,7 +636,7 @@ SELECT
   a.employee_id,
   e.name AS employee_name,
   e.department,
-  e.position,
+  e."position",
   a.type,
   a.start_date,
   a.end_date,

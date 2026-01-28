@@ -34,9 +34,15 @@ import {
   approveAbsence,
   rejectAbsence,
   deleteAbsence,
+  updateAbsenceStatus,
 } from "@/lib/supabase/queries"
 import { getCurrentProfile } from "@/lib/supabase/queries"
 import type { AbsenceWithEmployee, AbsenceStatus, AbsenceType } from "@/types/database"
+import {
+  KanbanBoard,
+  defaultAbsenceColumns,
+  type KanbanItem,
+} from "@/components/ui/kanban"
 
 interface AbsenceFiltersState {
   status?: AbsenceStatus
@@ -213,16 +219,83 @@ export default function AbsencesPage() {
     setApprovalDialogOpen(true)
   }
 
+  // Kanban handlers
+  const handleKanbanItemMove = async (itemId: string, newStatus: AbsenceStatus) => {
+    const absence = absences.find((a) => a.id === itemId)
+    if (!absence) return
+
+    // Update in database
+    const result = await updateAbsenceStatus(itemId, newStatus)
+    if (result.error) {
+      toast.error("Erro ao atualizar status: " + result.error.message)
+      return
+    }
+
+    // Update local state
+    setAbsences((prev) =>
+      prev.map((a) => (a.id === itemId ? { ...a, status: newStatus } : a))
+    )
+
+    // Update stats
+    setStats((prev) => {
+      const updated = { ...prev }
+
+      // Decrement old status
+      if (absence.status === "pending") updated.pending = Math.max(0, updated.pending - 1)
+      else if (absence.status === "approved") updated.approved = Math.max(0, updated.approved - 1)
+      else if (absence.status === "rejected") updated.rejected = Math.max(0, updated.rejected - 1)
+
+      // Increment new status
+      if (newStatus === "pending") updated.pending += 1
+      else if (newStatus === "approved") updated.approved += 1
+      else if (newStatus === "rejected") updated.rejected += 1
+
+      return updated
+    })
+
+    toast.success("Status atualizado com sucesso")
+  }
+
+  const handleKanbanItemClick = (item: KanbanItem) => {
+    const absence = absences.find((a) => a.id === item.id)
+    if (absence) {
+      handleView(absence)
+    }
+  }
+
+  // Convert absences to kanban items
+  const kanbanItems: KanbanItem[] = React.useMemo(() => {
+    return absences
+      .filter((absence) =>
+        absence.status === "pending" ||
+        absence.status === "approved" ||
+        absence.status === "rejected" ||
+        absence.status === "in_progress"
+      )
+      .map((absence) => ({
+        id: absence.id,
+        title: absence.employee_name || "Sem nome",
+        status: absence.status,
+        type: absence.type,
+        startDate: absence.start_date,
+        endDate: absence.end_date,
+        employee: {
+          id: absence.employee_id,
+          name: absence.employee_name || "Sem nome",
+          avatar_url: absence.employee_photo_url ?? undefined,
+          department: absence.employee_department ?? undefined,
+        },
+        metadata: {
+          reason: absence.reason,
+          notes: absence.notes,
+        },
+      }))
+  }, [absences])
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Ausências</h1>
-          <p className="text-muted-foreground">
-            Gerencie férias, atestados e licenças
-          </p>
-        </div>
+      {/* Page Actions */}
+      <div className="flex items-center justify-end">
         <Button asChild>
           <Link href="/ausencias/novo">
             <Plus className="mr-2 size-4" />
@@ -302,6 +375,7 @@ export default function AbsencesPage() {
             </TabsTrigger>
             <TabsTrigger value="approved">Aprovadas</TabsTrigger>
             <TabsTrigger value="rejected">Rejeitadas</TabsTrigger>
+            <TabsTrigger value="kanban">Kanban</TabsTrigger>
           </TabsList>
           <AbsenceFilters filters={filters} onFiltersChange={setFilters} />
         </div>
@@ -377,6 +451,31 @@ export default function AbsencesPage() {
                 isLoading={isLoading}
                 onView={handleView}
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="kanban">
+          <Card>
+            <CardHeader>
+              <CardTitle>Visualização Kanban</CardTitle>
+              <CardDescription>
+                Arraste os cards entre as colunas para alterar o status
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <KanbanBoard
+                  items={kanbanItems}
+                  columns={defaultAbsenceColumns}
+                  onItemMove={handleKanbanItemMove}
+                  onItemClick={handleKanbanItemClick}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

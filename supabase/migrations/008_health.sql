@@ -688,7 +688,7 @@ SELECT
   e.company_id,
   e.name,
   e.department,
-  e.position,
+  e."position",
   a.exam_date AS last_aso_date,
   a.type AS last_aso_type,
   a.result AS aso_result,

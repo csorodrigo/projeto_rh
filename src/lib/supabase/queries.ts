@@ -1666,6 +1666,44 @@ export async function approveAbsence(
 }
 
 /**
+ * Update absence status
+ */
+export async function updateAbsenceStatus(
+  absenceId: string,
+  status: AbsenceStatus
+): Promise<QueryResult<Absence>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const updateData: any = { status };
+
+  // Add status-specific metadata
+  if (status === 'approved') {
+    updateData.approved_at = new Date().toISOString();
+    updateData.approved_by = user?.id;
+  } else if (status === 'rejected') {
+    updateData.rejected_at = new Date().toISOString();
+    updateData.rejected_by = user?.id;
+  }
+
+  const { data, error } = await supabase
+    .from('absences')
+    .update(updateData)
+    .eq('id', absenceId)
+    .select()
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
  * Reject an absence
  */
 export async function rejectAbsence(

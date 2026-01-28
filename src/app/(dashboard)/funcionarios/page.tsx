@@ -2,22 +2,25 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Plus,
-  Search,
-  Filter,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
   Download,
-  Mail,
-  Loader2,
   RefreshCw,
   AlertCircle,
-  Users,
+  Eye,
+  Edit,
+  Mail,
+  Trash2,
+  MoreHorizontal,
+  CheckCircle2,
+  Pause,
+  Clock,
+  XCircle,
+  Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { ColumnDef } from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,15 +30,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,13 +38,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,48 +48,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getCurrentProfile, listEmployees, deleteEmployee } from "@/lib/supabase/queries"
+import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table"
+import { QuickStatusBadge, type StatusKey } from "@/components/ui/status-badge"
 import type { Employee } from "@/types/database"
 
-const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  active: { label: "Ativo", variant: "default" },
-  inactive: { label: "Inativo", variant: "secondary" },
-  on_leave: { label: "Afastado", variant: "outline" },
-  terminated: { label: "Desligado", variant: "destructive" },
-}
-
-function EmployeeTableSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="flex items-center gap-4 py-4">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <div className="space-y-2 flex-1">
-            <Skeleton className="h-4 w-[200px]" />
-            <Skeleton className="h-3 w-[150px]" />
-          </div>
-          <Skeleton className="h-4 w-[100px]" />
-          <Skeleton className="h-4 w-[120px]" />
-          <Skeleton className="h-6 w-[80px]" />
-          <Skeleton className="h-4 w-[80px]" />
-        </div>
-      ))}
-    </div>
-  )
+const statusMap: Record<string, StatusKey> = {
+  active: "active",
+  inactive: "inactive",
+  on_leave: "on_leave",
+  terminated: "terminated",
 }
 
 export default function EmployeesPage() {
+  const router = useRouter()
   const [employees, setEmployees] = React.useState<Employee[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState<string>("all")
-  const [departmentFilter, setDepartmentFilter] = React.useState<string>("all")
   const [employeeToDelete, setEmployeeToDelete] = React.useState<Employee | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const [selectedEmployees, setSelectedEmployees] = React.useState<Employee[]>([])
 
   const fetchEmployees = React.useCallback(async () => {
     setIsLoading(true)
@@ -115,15 +81,7 @@ export default function EmployeesPage() {
         return
       }
 
-      const filters: { status?: string; department?: string } = {}
-      if (statusFilter !== "all") {
-        filters.status = statusFilter
-      }
-      if (departmentFilter !== "all") {
-        filters.department = departmentFilter
-      }
-
-      const result = await listEmployees(profileResult.data.company_id, filters)
+      const result = await listEmployees(profileResult.data.company_id)
       if (result.error) {
         setError(result.error.message)
         return
@@ -135,7 +93,7 @@ export default function EmployeesPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [statusFilter, departmentFilter])
+  }, [])
 
   React.useEffect(() => {
     fetchEmployees()
@@ -162,34 +120,131 @@ export default function EmployeesPage() {
     }
   }
 
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      emp.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.employee_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const departments = React.useMemo(() => {
-    const depts = new Set(employees.map((e) => e.department).filter(Boolean))
-    return Array.from(depts).sort()
-  }, [employees])
+  const columns: ColumnDef<Employee>[] = [
+    {
+      accessorKey: "full_name",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Funcionário" />,
+      cell: ({ row }) => {
+        const employee = row.original
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar className="size-10">
+              <AvatarImage src={employee.photo_url || ""} alt={employee.full_name} />
+              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                {employee.full_name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="font-medium truncate">{employee.full_name}</p>
+              <p className="text-sm text-muted-foreground truncate">
+                {employee.email || employee.employee_number}
+              </p>
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "department",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Departamento" />,
+      cell: ({ row }) => <span>{row.getValue("department") || "-"}</span>,
+    },
+    {
+      accessorKey: "position",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Cargo" />,
+      cell: ({ row }) => <span>{row.getValue("position") || "-"}</span>,
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string
+        const statusKey = statusMap[status] || "active"
+        return <QuickStatusBadge status={statusKey} />
+      },
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id))
+      },
+    },
+    {
+      accessorKey: "hire_date",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Admissão" />,
+      cell: ({ row }) => {
+        const date = row.getValue("hire_date") as string
+        return date ? new Date(date).toLocaleDateString("pt-BR") : "-"
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const employee = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8">
+                <MoreHorizontal className="size-4" />
+                <span className="sr-only">Ações</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[180px]">
+              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link href={`/funcionarios/${employee.id}`} className="cursor-pointer">
+                  <Eye className="mr-2 size-4" />
+                  Visualizar
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/funcionarios/${employee.id}/editar`} className="cursor-pointer">
+                  <Edit className="mr-2 size-4" />
+                  Editar
+                </Link>
+              </DropdownMenuItem>
+              {employee.email && (
+                <DropdownMenuItem onClick={() => window.open(`mailto:${employee.email}`)}>
+                  <Mail className="mr-2 size-4" />
+                  Enviar Email
+                </DropdownMenuItem>
+              )}
+              {employee.status !== "terminated" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setEmployeeToDelete(employee)}
+                  >
+                    <Trash2 className="mr-2 size-4" />
+                    Desligar
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ]
 
   if (error) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Funcionarios</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Funcionários</h1>
             <p className="text-muted-foreground">
-              Gerencie todos os funcionarios da empresa
+              Gerencie todos os funcionários da empresa
             </p>
           </div>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-10">
             <AlertCircle className="h-10 w-10 text-destructive mb-4" />
-            <p className="text-lg font-medium mb-2">Erro ao carregar funcionarios</p>
+            <p className="text-lg font-medium mb-2">Erro ao carregar funcionários</p>
             <p className="text-muted-foreground mb-4">{error}</p>
             <Button onClick={fetchEmployees}>
               <RefreshCw className="mr-2 size-4" />
@@ -206,204 +261,55 @@ export default function EmployeesPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Funcionarios</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Funcionários</h1>
           <p className="text-muted-foreground">
-            Gerencie todos os funcionarios da empresa
+            Gerencie todos os funcionários da empresa
           </p>
         </div>
-        <Button asChild>
-          <Link href="/funcionarios/novo">
-            <Plus className="mr-2 size-4" />
-            Novo Funcionario
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchEmployees}>
+            <RefreshCw className="mr-2 size-4" />
+            Atualizar
+          </Button>
+          <Button asChild>
+            <Link href="/funcionarios/novo">
+              <Plus className="mr-2 size-4" />
+              Novo Funcionário
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Filters Card */}
+      {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-          <CardDescription>Busque e filtre funcionarios</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, email, matricula..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-                <SelectItem value="on_leave">Afastado</SelectItem>
-                <SelectItem value="terminated">Desligado</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Departamentos</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept!}>
-                    {dept}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={fetchEmployees}>
-              <RefreshCw className="mr-2 size-4" />
-              Atualizar
-            </Button>
-            <Button variant="outline">
-              <Download className="mr-2 size-4" />
-              Exportar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Employees Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Funcionarios</CardTitle>
+          <CardTitle>Lista de Funcionários</CardTitle>
           <CardDescription>
-            {isLoading ? (
-              <Skeleton className="h-4 w-[200px]" />
-            ) : (
-              `${filteredEmployees.length} funcionario(s) encontrado(s)`
-            )}
+            Visualize e gerencie todos os funcionários da empresa
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <EmployeeTableSkeleton />
-          ) : filteredEmployees.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10">
-              <Users className="h-10 w-10 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-2">Nenhum funcionario encontrado</p>
-              <p className="text-muted-foreground mb-4">
-                {searchTerm || statusFilter !== "all" || departmentFilter !== "all"
-                  ? "Tente ajustar os filtros de busca"
-                  : "Comece adicionando seu primeiro funcionario"}
-              </p>
-              {!searchTerm && statusFilter === "all" && departmentFilter === "all" && (
-                <Button asChild>
-                  <Link href="/funcionarios/novo">
-                    <Plus className="mr-2 size-4" />
-                    Adicionar Funcionario
-                  </Link>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Funcionario</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead>Cargo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Admissao</TableHead>
-                  <TableHead className="w-[70px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEmployees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={employee.photo_url || ""} alt={employee.full_name} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {employee.full_name
-                              ?.split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .slice(0, 2)
-                              .toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{employee.full_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {employee.email || employee.employee_number}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{employee.department || "-"}</TableCell>
-                    <TableCell>{employee.position || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusMap[employee.status]?.variant || "default"}>
-                        {statusMap[employee.status]?.label || employee.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {employee.hire_date
-                        ? new Date(employee.hire_date).toLocaleDateString("pt-BR")
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Acoes</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acoes</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/funcionarios/${employee.id}`}>
-                              <Eye className="mr-2 size-4" />
-                              Visualizar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/funcionarios/${employee.id}/editar`}>
-                              <Edit className="mr-2 size-4" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          {employee.email && (
-                            <DropdownMenuItem
-                              onClick={() => window.open(`mailto:${employee.email}`)}
-                            >
-                              <Mail className="mr-2 size-4" />
-                              Enviar Email
-                            </DropdownMenuItem>
-                          )}
-                          {employee.status !== "terminated" && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => setEmployeeToDelete(employee)}
-                              >
-                                <Trash2 className="mr-2 size-4" />
-                                Desligar
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <DataTable
+            columns={columns}
+            data={employees}
+            searchKey="full_name"
+            searchPlaceholder="Buscar por nome, email, matrícula..."
+            isLoading={isLoading}
+            enableRowSelection
+            onSelectionChange={setSelectedEmployees}
+            emptyMessage="Nenhum funcionário encontrado"
+            emptyDescription="Comece adicionando seu primeiro funcionário"
+            toolbar={
+              selectedEmployees.length > 0 && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2 size-4" />
+                    Exportar selecionados ({selectedEmployees.length})
+                  </Button>
+                </div>
+              )
+            }
+          />
         </CardContent>
       </Card>
 
@@ -413,8 +319,8 @@ export default function EmployeesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Desligamento</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja desligar o funcionario{" "}
-              <strong>{employeeToDelete?.full_name}</strong>? Esta acao ira alterar
+              Tem certeza que deseja desligar o funcionário{" "}
+              <strong>{employeeToDelete?.full_name}</strong>? Esta ação irá alterar
               o status para &quot;Desligado&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>

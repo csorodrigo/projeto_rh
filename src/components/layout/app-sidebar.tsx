@@ -15,8 +15,14 @@ import {
   Settings,
   Building2,
   ChevronUp,
+  ChevronDown,
   LogOut,
   User,
+  UserPlus,
+  FileText,
+  History,
+  ClipboardList,
+  TrendingUp,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -42,47 +48,93 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
-const navigationItems = [
+interface NavigationItem {
+  title: string
+  url: string
+  icon: React.ComponentType<{ className?: string }>
+  badge?: {
+    count: number
+    variant?: "default" | "destructive" | "outline" | "secondary"
+  }
+  iconColor?: string
+  items?: {
+    title: string
+    url: string
+  }[]
+}
+
+const navigationItems: NavigationItem[] = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
+    iconColor: "text-blue-500",
   },
   {
-    title: "Funcionarios",
+    title: "Funcionários",
     url: "/funcionarios",
     icon: Users,
+    iconColor: "text-green-500",
+    items: [
+      { title: "Lista", url: "/funcionarios" },
+      { title: "Organograma", url: "/funcionarios/organograma" },
+      { title: "Importar", url: "/funcionarios/importar" },
+    ],
   },
   {
     title: "Ponto",
     url: "/ponto",
     icon: Clock,
+    iconColor: "text-purple-500",
+    items: [
+      { title: "Hoje", url: "/ponto" },
+      { title: "Histórico", url: "/ponto/historico" },
+      { title: "Configurações", url: "/ponto/config" },
+    ],
   },
   {
-    title: "Ausencias",
+    title: "Ausências",
     url: "/ausencias",
     icon: Calendar,
+    iconColor: "text-orange-500",
+    badge: { count: 5, variant: "destructive" },
+    items: [
+      { title: "Lista", url: "/ausencias" },
+      { title: "Kanban", url: "/ausencias/kanban" },
+      { title: "Calendário", url: "/ausencias/calendario" },
+    ],
   },
   {
     title: "PDI",
     url: "/pdi",
     icon: Target,
+    iconColor: "text-cyan-500",
   },
   {
-    title: "Saude",
+    title: "Saúde",
     url: "/saude",
     icon: Heart,
+    iconColor: "text-red-500",
+    badge: { count: 3, variant: "secondary" },
   },
   {
     title: "Folha",
     url: "/folha",
     icon: DollarSign,
+    iconColor: "text-emerald-500",
   },
   {
-    title: "Relatorios",
+    title: "Relatórios",
     url: "/relatorios",
     icon: BarChart3,
+    iconColor: "text-indigo-500",
   },
 ]
 
@@ -119,6 +171,7 @@ export function AppSidebar({
   const pathname = usePathname()
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
+  const [openItems, setOpenItems] = React.useState<string[]>([])
 
   const isActiveRoute = (url: string) => {
     if (url === "/dashboard") {
@@ -126,6 +179,25 @@ export function AppSidebar({
     }
     return pathname.startsWith(url)
   }
+
+  const toggleItem = (title: string) => {
+    setOpenItems((prev) =>
+      prev.includes(title)
+        ? prev.filter((item) => item !== title)
+        : [...prev, title]
+    )
+  }
+
+  React.useEffect(() => {
+    // Auto-expand active section
+    navigationItems.forEach((item) => {
+      if (item.items && isActiveRoute(item.url)) {
+        setOpenItems((prev) =>
+          prev.includes(item.title) ? prev : [...prev, item.title]
+        )
+      }
+    })
+  }, [pathname])
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -155,20 +227,88 @@ export function AppSidebar({
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActiveRoute(item.url)}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navigationItems.map((item) => {
+                const hasSubItems = item.items && item.items.length > 0
+                const isOpen = openItems.includes(item.title)
+                const isActive = isActiveRoute(item.url)
+
+                if (hasSubItems) {
+                  return (
+                    <Collapsible
+                      key={item.title}
+                      open={isOpen}
+                      onOpenChange={() => toggleItem(item.title)}
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton
+                            isActive={isActive}
+                            tooltip={item.title}
+                            className="group"
+                          >
+                            <item.icon className={cn("transition-colors", item.iconColor)} />
+                            <span className="flex-1">{item.title}</span>
+                            {item.badge && !isCollapsed && (
+                              <Badge
+                                variant={item.badge.variant || "default"}
+                                className="ml-auto h-5 px-1.5 text-xs"
+                              >
+                                {item.badge.count}
+                              </Badge>
+                            )}
+                            <ChevronDown
+                              className={cn(
+                                "ml-auto size-4 transition-transform",
+                                isOpen && "rotate-180"
+                              )}
+                            />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="transition-all data-[state=closed]:animate-out data-[state=open]:animate-in">
+                          <SidebarMenu className="pl-4 border-l ml-4">
+                            {item.items?.map((subItem) => (
+                              <SidebarMenuItem key={subItem.url}>
+                                <SidebarMenuButton
+                                  asChild
+                                  isActive={pathname === subItem.url}
+                                  className="text-sm"
+                                >
+                                  <Link href={subItem.url}>
+                                    <span>{subItem.title}</span>
+                                  </Link>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            ))}
+                          </SidebarMenu>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  )
+                }
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.title}
+                    >
+                      <Link href={item.url} className="group">
+                        <item.icon className={cn("transition-colors", item.iconColor)} />
+                        <span className="flex-1">{item.title}</span>
+                        {item.badge && !isCollapsed && (
+                          <Badge
+                            variant={item.badge.variant || "default"}
+                            className="ml-auto h-5 px-1.5 text-xs"
+                          >
+                            {item.badge.count}
+                          </Badge>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

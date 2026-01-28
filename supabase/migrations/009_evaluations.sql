@@ -846,7 +846,7 @@ SELECT
   ep.employee_id,
   e.name AS employee_name,
   e.department,
-  e.position,
+  e."position",
   ep.final_score,
   ep.calibrated_score,
   ep.final_rating,

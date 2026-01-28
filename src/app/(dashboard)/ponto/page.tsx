@@ -148,17 +148,75 @@ export default function PontoPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Controle de Ponto</h1>
-        <p className="text-muted-foreground">
-          Registre suas entradas e saídas
-        </p>
-      </div>
+      {/* Quick Summary Widget */}
+      <Card className="border-2 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 shadow-lg">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Current Status */}
+            <div className="flex items-center gap-4">
+              <div className={`p-4 rounded-xl shadow-md ${
+                currentStatus === 'working' ? 'bg-gradient-to-br from-emerald-500 to-green-500 animate-pulse' :
+                currentStatus === 'break' ? 'bg-gradient-to-br from-blue-400 to-cyan-400 animate-pulse' :
+                currentStatus === 'finished' ? 'bg-gradient-to-br from-slate-500 to-gray-500' :
+                'bg-gradient-to-br from-slate-300 to-gray-400'
+              }`}>
+                <div className="size-8 rounded-full bg-white/20 flex items-center justify-center">
+                  {currentStatus === 'working' ? '🟢' :
+                   currentStatus === 'break' ? '🔵' :
+                   currentStatus === 'finished' ? '✅' : '⏸️'}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="text-lg font-bold">
+                  {currentStatus === 'not_started' && 'Aguardando'}
+                  {currentStatus === 'working' && 'Trabalhando'}
+                  {currentStatus === 'break' && 'Intervalo'}
+                  {currentStatus === 'finished' && 'Finalizado'}
+                </p>
+              </div>
+            </div>
+
+            {/* Worked Today */}
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 shadow-md">
+                <div className="size-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold">
+                  {Math.floor(workedMinutes / 60)}h
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Trabalhado Hoje</p>
+                <p className="text-lg font-bold tabular-nums">
+                  {Math.floor(workedMinutes / 60)}h {workedMinutes % 60}min
+                </p>
+              </div>
+            </div>
+
+            {/* Time Bank */}
+            <div className="flex items-center gap-4">
+              <div className={`p-4 rounded-xl shadow-md ${
+                bankMinutes > 0 ? 'bg-gradient-to-br from-blue-500 to-cyan-500' :
+                bankMinutes < 0 ? 'bg-gradient-to-br from-orange-500 to-red-500' :
+                'bg-gradient-to-br from-slate-400 to-gray-400'
+              }`}>
+                <div className="size-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold">
+                  {bankMinutes > 0 ? '+' : bankMinutes < 0 ? '-' : '0'}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Banco de Horas</p>
+                <p className="text-lg font-bold tabular-nums">
+                  {Math.abs(Math.floor(bankMinutes / 60))}h {Math.abs(bankMinutes % 60)}min
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Clock Card */}
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Registrar Ponto</CardTitle>
             <CardDescription>

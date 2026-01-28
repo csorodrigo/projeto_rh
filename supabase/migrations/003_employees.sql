@@ -61,7 +61,7 @@ CREATE TABLE employees (
   -- =====================================================
 
   -- Cargo e departamento
-  position TEXT NOT NULL, -- Cargo
+  "position" TEXT NOT NULL, -- Cargo
   department TEXT, -- Departamento
   cost_center VARCHAR(20), -- Centro de custo
   manager_id UUID REFERENCES employees(id), -- Gestor direto
@@ -233,7 +233,7 @@ CREATE INDEX idx_employees_name ON employees USING gin (name gin_trgm_ops);
 -- Filtros comuns
 CREATE INDEX idx_employees_status ON employees (status);
 CREATE INDEX idx_employees_department ON employees (department);
-CREATE INDEX idx_employees_position ON employees (position);
+CREATE INDEX idx_employees_position ON employees ("position");
 CREATE INDEX idx_employees_manager ON employees (manager_id);
 CREATE INDEX idx_employees_hire_date ON employees (hire_date);
 CREATE INDEX idx_employees_contract_type ON employees (contract_type);

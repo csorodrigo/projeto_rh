@@ -807,7 +807,7 @@ BEGIN
     jsonb_build_object(
       'name', v_employee.name,
       'cpf', v_employee.cpf,
-      'position', v_employee.position,
+      'position', v_employee."position",
       'department', v_employee.department
     ),
     jsonb_build_object(
@@ -1015,7 +1015,7 @@ SELECT
   ep.employee_id,
   ep.employee_data->>'name' AS employee_name,
   ep.employee_data->>'cpf' AS employee_cpf,
-  ep.employee_data->>'position' AS position,
+  ep.employee_data->>'position' AS "position",
   ep.employee_data->>'department' AS department,
   ep.base_salary,
   ep.earnings,
