@@ -159,7 +159,9 @@ export interface Company {
 export interface Profile {
   id: string;
   company_id: string | null;
+  employee_id: string | null;
   email: string;
+  name: string;
   full_name: string;
   role: UserRole;
   avatar_url: string | null;
