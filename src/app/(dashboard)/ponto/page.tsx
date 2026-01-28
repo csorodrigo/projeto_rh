@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Smartphone, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
