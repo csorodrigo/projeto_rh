@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Calendar as CalendarIcon, Download, Trash2 } from "lucide-react"
+import { Plus, Calendar as CalendarIcon, Download, Trash2, Star, Palmtree, Lock, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { toast } from "sonner"
@@ -30,7 +30,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+
+type CalendarSection = 'feriados' | 'ferias' | 'ausencias'
+
+const sections = [
+  { id: 'feriados' as const, label: 'Feriados', icon: Star },
+  { id: 'ferias' as const, label: 'Férias', icon: Palmtree },
+  { id: 'ausencias' as const, label: 'Ausências', icon: Lock },
+]
 
 interface Holiday {
   id: string
@@ -41,6 +50,7 @@ interface Holiday {
 }
 
 export function CalendarSettings() {
+  const [activeSection, setActiveSection] = React.useState<CalendarSection>('feriados')
   const [holidays, setHolidays] = React.useState<Holiday[]>([
     {
       id: "1",
@@ -152,13 +162,43 @@ export function CalendarSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex gap-6">
+      {/* Menu Lateral Secundário */}
+      <aside className="w-48 flex-shrink-0">
+        <nav className="space-y-1">
+          {sections.map((section) => (
+            <Button
+              key={section.id}
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-2",
+                activeSection === section.id &&
+                  "bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-700"
+              )}
+              onClick={() => setActiveSection(section.id)}
+            >
+              <section.icon className="h-4 w-4" />
+              {section.label}
+              {activeSection === section.id && (
+                <ChevronRight className="ml-auto h-4 w-4" />
+              )}
+            </Button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Conteúdo Principal */}
+      <main className="flex-1 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Calendário de Feriados</h3>
+          <h3 className="text-lg font-semibold">
+            {sections.find((s) => s.id === activeSection)?.label}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Gerencie os feriados e dias não úteis
+            {activeSection === 'feriados' && 'Gerencie os feriados e dias não úteis'}
+            {activeSection === 'ferias' && 'Configure calendários de férias'}
+            {activeSection === 'ausencias' && 'Configure calendários de ausências'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -362,6 +402,7 @@ export function CalendarSettings() {
           </div>
         </CardContent>
       </Card>
+      </main>
     </div>
   )
 }

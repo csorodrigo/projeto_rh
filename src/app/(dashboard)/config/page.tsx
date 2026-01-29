@@ -9,6 +9,7 @@ import {
   Smartphone,
   CreditCard,
   Loader2,
+  Zap,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -24,6 +25,7 @@ import { CalendarSettings } from "@/components/config/calendar-settings"
 import { UsersSettings } from "@/components/config/users-settings"
 import { DevicesSettings } from "@/components/config/devices-settings"
 import { PlanSettings } from "@/components/config/plan-settings"
+import { AutomationsSettings } from "@/components/config/automations-settings"
 
 export default function ConfigPage() {
   const [isLoading, setIsLoading] = React.useState(true)
@@ -135,7 +137,7 @@ export default function ConfigPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 lg:w-auto">
           <TabsTrigger value="company" className="gap-2">
             <Building2 className="size-4" />
             <span className="hidden sm:inline">Empresa</span>
@@ -147,6 +149,10 @@ export default function ConfigPage() {
           <TabsTrigger value="calendar" className="gap-2">
             <Calendar className="size-4" />
             <span className="hidden sm:inline">Calendários</span>
+          </TabsTrigger>
+          <TabsTrigger value="automations" className="gap-2">
+            <Zap className="size-4" />
+            <span className="hidden sm:inline">Automações</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <Users className="size-4" />
@@ -176,6 +182,10 @@ export default function ConfigPage() {
 
         <TabsContent value="calendar" className="space-y-4">
           <CalendarSettings />
+        </TabsContent>
+
+        <TabsContent value="automations" className="space-y-4">
+          <AutomationsSettings />
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4">

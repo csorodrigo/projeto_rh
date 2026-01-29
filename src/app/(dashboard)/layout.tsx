@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { Header } from "@/components/layout/header"
+import { SupportChatWidget } from "@/components/support/chat-widget"
 
 export default function DashboardLayout({
   children,
@@ -26,6 +27,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </SidebarInset>
+      <SupportChatWidget />
     </SidebarProvider>
   )
 }

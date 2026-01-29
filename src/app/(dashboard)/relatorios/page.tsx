@@ -2,17 +2,16 @@
 
 import * as React from "react"
 import {
-  BarChart3,
   Download,
   FileText,
-  Users,
   Clock,
   Calendar,
-  TrendingUp,
-  PieChart,
+  Users,
+  FolderKanban,
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,73 +26,66 @@ import {
   getReportStats,
 } from "@/lib/supabase/queries"
 import { ReportGeneratorDialog } from "@/components/reports/ReportGeneratorDialog"
+import { ReportCategoryCard } from "@/components/relatorios/report-category-card"
 
-const reportTypes = [
+const categories = [
   {
-    id: "employees",
-    title: "Quadro de Funcionarios",
-    description: "Lista completa com todos os dados dos funcionarios",
-    icon: Users,
-    color: "bg-blue-100 text-blue-600",
-    disabled: true,
-  },
-  {
-    id: "time_tracking",
-    title: "Espelho de Ponto",
-    description: "Relatorio de marcacoes de ponto por periodo",
+    id: 'ponto',
+    title: 'Registro de ponto',
+    description: 'Relatórios de horas trabalhadas, banco de horas e frequência',
     icon: Clock,
-    color: "bg-green-100 text-green-600",
-    disabled: true,
+    iconColor: 'text-green-600',
+    iconBgColor: 'bg-green-100',
+    reportCount: 5,
   },
   {
-    id: "overtime",
-    title: "Horas Extras",
-    description: "Detalhamento de horas extras por funcionario",
-    icon: TrendingUp,
-    color: "bg-yellow-100 text-yellow-600",
-    disabled: true,
-  },
-  {
-    id: "absences",
-    title: "Ausencias e Ferias",
-    description: "Relatorio de faltas, ferias e licencas",
+    id: 'ausencias',
+    title: 'Férias e ausências',
+    description: 'Relatórios de férias, atestados e faltas',
     icon: Calendar,
-    color: "bg-purple-100 text-purple-600",
-    disabled: true,
+    iconColor: 'text-orange-600',
+    iconBgColor: 'bg-orange-100',
+    reportCount: 4,
   },
   {
-    id: "payroll",
-    title: "Folha de Pagamento",
-    description: "Resumo da folha por periodo",
-    icon: FileText,
-    color: "bg-pink-100 text-pink-600",
-    disabled: true,
+    id: 'dados-pessoais',
+    title: 'Dados pessoais',
+    description: 'Relatórios de aniversariantes, documentos e informações cadastrais',
+    icon: Users,
+    iconColor: 'text-blue-600',
+    iconBgColor: 'bg-blue-100',
+    reportCount: 3,
   },
   {
-    id: "turnover",
-    title: "Turnover",
-    description: "Analise de rotatividade de funcionarios",
-    icon: PieChart,
-    color: "bg-red-100 text-red-600",
-    disabled: true,
+    id: 'projetos',
+    title: 'Projetos e tarefas',
+    description: 'Relatórios de PDI, avaliações e desenvolvimento',
+    icon: FolderKanban,
+    iconColor: 'text-pink-600',
+    iconBgColor: 'bg-pink-100',
+    reportCount: 2,
   },
+]
+
+const legalReports = [
   {
     id: "aej",
     title: "Arquivo AEJ",
-    description: "Registro Eletronico de Jornada - Portaria 671 MTE",
+    description: "Registro Eletrônico de Jornada - Portaria 671 MTE",
     icon: FileText,
     color: "bg-indigo-100 text-indigo-600",
   },
   {
     id: "afd",
     title: "Arquivo AFD",
-    description: "Arquivo Fonte de Dados - Sistema de Ponto Eletronico",
+    description: "Arquivo Fonte de Dados - Sistema de Ponto Eletrônico",
     icon: FileText,
     color: "bg-cyan-100 text-cyan-600",
   },
 ]
 
 export default function RelatoriosPage() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = React.useState(true)
   const [reportDialog, setReportDialog] = React.useState<"aej" | "afd" | null>(null)
   const [stats, setStats] = React.useState({
@@ -137,30 +129,44 @@ export default function RelatoriosPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Relatorios</h1>
-          <p className="text-muted-foreground">
-            Gere relatorios personalizados
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">Relatórios</h1>
+        <p className="text-muted-foreground">
+          Escolha uma categoria para visualizar os relatórios disponíveis
+        </p>
       </div>
 
-      {/* Report Types Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {reportTypes.map((report) => {
-          const Icon = report.icon
-          const isAEJorAFD = report.id === "aej" || report.id === "afd"
-          const isDisabled = report.disabled ?? false
+      {/* Report Categories */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+        {categories.map((category) => (
+          <ReportCategoryCard
+            key={category.id}
+            {...category}
+            onClick={() => router.push(`/relatorios/${category.id}`)}
+          />
+        ))}
+      </div>
 
-          return (
-            <Card key={report.id} className="hover:border-primary/50 transition-colors">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className={`rounded-lg p-3 ${report.color}`}>
-                    <Icon className="size-5" />
-                  </div>
-                  {isAEJorAFD ? (
+      {/* Legal Reports Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Relatórios Legais</h2>
+          <p className="text-sm text-muted-foreground">
+            Arquivos obrigatórios do Ministério do Trabalho
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {legalReports.map((report) => {
+            const Icon = report.icon
+
+            return (
+              <Card key={report.id} className="hover:border-primary/50 transition-colors">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className={`rounded-lg p-3 ${report.color}`}>
+                      <Icon className="size-5" />
+                    </div>
                     <Button
                       size="sm"
                       variant="outline"
@@ -169,78 +175,31 @@ export default function RelatoriosPage() {
                       <Download className="mr-2 size-4" />
                       Gerar
                     </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={isDisabled}
-                      title={isDisabled ? "Em breve" : undefined}
-                    >
-                      <Download className="mr-2 size-4" />
-                      {isDisabled ? "Em breve" : "Gerar"}
-                    </Button>
-                  )}
-                </div>
-                <CardTitle className="mt-4">{report.title}</CardTitle>
-                <CardDescription>{report.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* Charts Placeholder */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Funcionarios por Departamento</CardTitle>
-            <CardDescription>Distribuicao atual do quadro</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-              <div className="text-center">
-                <PieChart className="mx-auto size-10 text-muted-foreground/50" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Grafico de distribuicao
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Evolucao do Quadro</CardTitle>
-            <CardDescription>Admissoes e desligamentos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-              <div className="text-center">
-                <BarChart3 className="mx-auto size-10 text-muted-foreground/50" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Grafico de evolucao
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                  <CardTitle className="mt-4">{report.title}</CardTitle>
+                  <CardDescription>{report.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            )
+          })}
+        </div>
       </div>
 
       {/* Quick Stats */}
       <Card>
         <CardHeader>
-          <CardTitle>Indicadores Rapidos</CardTitle>
-          <CardDescription>Metricas do mes atual</CardDescription>
+          <CardTitle>Indicadores Rápidos</CardTitle>
+          <CardDescription>Métricas do mês atual</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="text-center p-4 rounded-lg bg-muted/50">
               <p className="text-3xl font-bold text-blue-600">{stats.totalEmployees}</p>
-              <p className="text-sm text-muted-foreground">Funcionarios ativos</p>
+              <p className="text-sm text-muted-foreground">Funcionários ativos</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
               <p className="text-3xl font-bold text-green-600">{stats.attendanceRate}%</p>
-              <p className="text-sm text-muted-foreground">Taxa de presenca</p>
+              <p className="text-sm text-muted-foreground">Taxa de presença</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
               <p className="text-3xl font-bold text-yellow-600">{stats.turnoverRate}%</p>
@@ -248,7 +207,7 @@ export default function RelatoriosPage() {
             </div>
             <div className="text-center p-4 rounded-lg bg-muted/50">
               <p className="text-3xl font-bold text-purple-600">{stats.overtimeHours}h</p>
-              <p className="text-sm text-muted-foreground">Horas extras mes</p>
+              <p className="text-sm text-muted-foreground">Horas extras mês</p>
             </div>
           </div>
         </CardContent>
