@@ -1,10 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Turbopack config removed to fix build timeout issues
-  // turbopack: {
-  //   root: process.cwd(),
-  // },
+  // Empty turbopack config to silence webpack config warning
+  turbopack: {},
 
   // Transpile packages that cause issues with Turbopack
   // transpilePackages: ['jspdf', 'jspdf-autotable'], // Removed - PDF export disabled
@@ -18,16 +16,6 @@ const nextConfig: NextConfig = {
   // Skip ESLint during build
   eslint: {
     ignoreDuringBuilds: true,
-  },
-
-  // Webpack configuration for handling PDF libraries
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      canvas: false,
-      encoding: false,
-    };
-    return config;
   },
 };
 
