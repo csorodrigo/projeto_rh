@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   // Empty turbopack config to silence webpack config warning
   turbopack: {},
 
-  // Transpile packages that cause issues with Turbopack
-  // transpilePackages: ['jspdf', 'jspdf-autotable'], // Removed - PDF export disabled
+  // External packages for server components to avoid bundling issues
+  serverComponentsExternalPackages: ['jspdf', 'jspdf-autotable'],
 
   // Temporarily skip TypeScript checking during build
   // to isolate the error
