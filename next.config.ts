@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   // },
 
   // Transpile packages that cause issues with Turbopack
-  transpilePackages: ['jspdf', 'jspdf-autotable'],
+  // transpilePackages: ['jspdf', 'jspdf-autotable'], // Removed - PDF export disabled
 
   // Temporarily skip TypeScript checking during build
   // to isolate the error
