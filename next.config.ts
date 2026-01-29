@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   //   root: process.cwd(),
   // },
 
+  // Transpile packages that cause issues with Turbopack
+  transpilePackages: ['jspdf', 'jspdf-autotable'],
+
   // Temporarily skip TypeScript checking during build
   // to isolate the error
   typescript: {
@@ -15,6 +18,16 @@ const nextConfig: NextConfig = {
   // Skip ESLint during build
   eslint: {
     ignoreDuringBuilds: true,
+  },
+
+  // Webpack configuration for handling PDF libraries
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+      encoding: false,
+    };
+    return config;
   },
 };
 
