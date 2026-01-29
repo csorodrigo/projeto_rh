@@ -1,7 +1,5 @@
 import type { ReportResult, ReportFormat, ExportConfig } from '@/types/reports';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -93,7 +91,11 @@ export class ReportExporter {
   /**
    * Exporta para PDF
    */
-  private exportToPDF(result: ReportResult, config: ExportConfig): Buffer {
+  private async exportToPDF(result: ReportResult, config: ExportConfig): Promise<Buffer> {
+    // Dynamic import to avoid Turbopack timeout on large minified files
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+
     const doc = new jsPDF({
       orientation: config.pageOrientation || 'landscape',
       unit: 'mm',
