@@ -12,6 +12,9 @@ import {
   DollarSign,
   Settings,
   Search,
+  Briefcase,
+  UserPlus,
+  TrendingUp,
 } from "lucide-react"
 
 import {
@@ -106,6 +109,12 @@ export function SearchCommand() {
               <DollarSign className="mr-2 h-4 w-4 text-emerald-600" />
               <span>Folha</span>
             </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/recrutamento"))}
+            >
+              <Briefcase className="mr-2 h-4 w-4 text-purple-500" />
+              <span>Recrutamento</span>
+            </CommandItem>
           </CommandGroup>
 
           <CommandSeparator />
@@ -134,6 +143,24 @@ export function SearchCommand() {
             >
               <FileText className="mr-2 h-4 w-4" />
               <span>Gerar Relatório</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/recrutamento/vagas/nova"))}
+            >
+              <Briefcase className="mr-2 h-4 w-4" />
+              <span>Nova Vaga</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/recrutamento/pipeline"))}
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              <span>Ver Pipeline</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/recrutamento/candidatos/novo"))}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              <span>Adicionar Candidato</span>
             </CommandItem>
           </CommandGroup>
 

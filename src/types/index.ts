@@ -59,3 +59,45 @@ export type {
   SignInCredentials,
   SignUpCredentials,
 } from '@/lib/supabase/auth';
+
+// Recruitment types
+export type {
+  // Enums
+  JobStatus,
+  JobType,
+  JobLocation,
+  ExperienceLevel,
+  ApplicationStatus,
+  ApplicationSource,
+  ActivityType,
+  InterviewType,
+  InterviewStatus,
+  CandidateRating,
+  // Interfaces
+  Job,
+  PipelineStage,
+  Candidate,
+  Application,
+  Rating,
+  Activity,
+  Interview,
+  InterviewerInfo,
+  CandidateDocument,
+  // Extended types
+  CandidateWithApplications,
+  ApplicationWithJob,
+  ApplicationWithCandidate,
+  ApplicationWithDetails,
+  ActivityWithUser,
+  // Utility types
+  CandidateDuplicate,
+  MergeCandidateRequest,
+  // Statistics
+  JobStatistics,
+  RecruitmentMetrics,
+  // Form types
+  CreateCandidateFormData,
+  CreateApplicationFormData,
+  AddActivityFormData,
+  ScheduleInterviewFormData,
+} from './recruitment';

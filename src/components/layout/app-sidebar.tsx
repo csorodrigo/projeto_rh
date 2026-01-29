@@ -23,6 +23,7 @@ import {
   History,
   ClipboardList,
   TrendingUp,
+  Briefcase,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -129,6 +130,19 @@ const navigationItems: NavigationItem[] = [
     url: "/folha",
     icon: DollarSign,
     iconColor: "text-emerald-600",
+  },
+  {
+    title: "Recrutamento",
+    url: "/recrutamento",
+    icon: Briefcase,
+    iconColor: "text-purple-500",
+    items: [
+      { title: "Dashboard", url: "/recrutamento" },
+      { title: "Vagas", url: "/recrutamento/vagas" },
+      { title: "Pipeline", url: "/recrutamento/pipeline" },
+      { title: "Candidatos", url: "/recrutamento/candidatos" },
+      { title: "Admissões", url: "/recrutamento/admissao" },
+    ],
   },
   {
     title: "Relatórios",
