@@ -63,7 +63,7 @@ export async function getTodayAbsences(): Promise<AbsentEmployee[]> {
     const today = new Date().toISOString().split('T')[0];
 
     // Buscar ausências aprovadas que incluem hoje
-    const { data: absences, error } = await supabase
+    const result = await supabase
       .from('absences')
       .select(`
         id,
@@ -78,7 +78,10 @@ export async function getTodayAbsences(): Promise<AbsentEmployee[]> {
       `)
       .eq('status', 'approved')
       .lte('start_date', today)
-      .gte('end_date', today) as { data: any[] | null; error: any };
+      .gte('end_date', today);
+
+    const absences = result.data as any[] | null;
+    const error = result.error;
 
     if (error) {
       console.error('Erro ao buscar ausências:', error);
@@ -136,7 +139,7 @@ export async function getUpcomingAbsences(days: number = 7): Promise<AbsentEmplo
     const futureDateStr = futureDate.toISOString().split('T')[0];
 
     // Buscar ausências aprovadas futuras
-    const { data: absences, error } = await supabase
+    const result = await supabase
       .from('absences')
       .select(`
         id,
@@ -153,7 +156,10 @@ export async function getUpcomingAbsences(days: number = 7): Promise<AbsentEmplo
       .eq('status', 'approved')
       .gte('start_date', todayStr)
       .lte('start_date', futureDateStr)
-      .order('start_date', { ascending: true }) as { data: any[] | null; error: any };
+      .order('start_date', { ascending: true });
+
+    const absences = result.data as any[] | null;
+    const error = result.error;
 
     if (error) {
       console.error('Erro ao buscar próximas ausências:', error);

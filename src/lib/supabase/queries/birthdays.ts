@@ -44,11 +44,14 @@ export async function getWeeklyBirthdays(): Promise<Birthday[]> {
     endOfWeek.setHours(23, 59, 59, 999);
 
     // Buscar funcionários ativos
-    const { data: employees, error } = await supabase
+    const result = await supabase
       .from('employees')
       .select('id, name, birth_date, personal_email')
       .eq('status', 'active')
-      .not('birth_date', 'is', null) as { data: EmployeeData[] | null; error: any };
+      .not('birth_date', 'is', null);
+
+    const employees = result.data as EmployeeData[] | null;
+    const error = result.error;
 
     if (error) {
       console.error('Erro ao buscar aniversariantes:', error);
@@ -141,11 +144,14 @@ export async function getTodayBirthdays(): Promise<Birthday[]> {
     const currentDay = today.getDate();
 
     // Buscar funcionários que fazem aniversário hoje
-    const { data: employees, error } = await supabase
+    const result = await supabase
       .from('employees')
       .select('id, name, birth_date, personal_email')
       .eq('status', 'active')
-      .not('birth_date', 'is', null) as { data: EmployeeData[] | null; error: any };
+      .not('birth_date', 'is', null);
+
+    const employees = result.data as EmployeeData[] | null;
+    const error = result.error;
 
     if (error) {
       console.error('Erro ao buscar aniversariantes do dia:', error);

@@ -62,11 +62,13 @@ export async function getRealDashboardStats(): Promise<DashboardStatsData> {
     endOfWeek.setHours(23, 59, 59, 999);
 
     // Buscar todos os funcionários ativos
-    const { data: employees } = await supabase
+    const result = await supabase
       .from('employees')
       .select('birth_date')
       .eq('status', 'active')
-      .not('birth_date', 'is', null) as { data: EmployeeBasicData[] | null };
+      .not('birth_date', 'is', null);
+
+    const employees = result.data as EmployeeBasicData[] | null;
 
     // Contar aniversariantes da semana
     let birthdaysThisWeek = 0;
