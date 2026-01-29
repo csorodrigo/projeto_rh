@@ -63,6 +63,7 @@ import {
 } from "@/lib/supabase/queries"
 import { WidgetsContainer } from "@/components/dashboard/widgets-container"
 import { StatsContainer } from "@/components/dashboard/stats-container"
+import { ComplianceAlertsWidget } from "@/components/dashboard/compliance-alerts-widget"
 
 interface StatCardProps {
   title: string
@@ -347,6 +348,7 @@ const mockAbsentees = [
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true)
+  const [companyId, setCompanyId] = React.useState<string | null>(null)
   const [stats, setStats] = React.useState<DashboardStats>({
     totalEmployees: 0,
     presentToday: 0,
@@ -375,6 +377,7 @@ export default function DashboardPage() {
         }
 
         const companyId = profileResult.data.company_id
+        setCompanyId(companyId)
 
         // Load stats and activity data
         const [statsResult, activityResult] = await Promise.all([
@@ -684,6 +687,13 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Compliance Alerts - Full Width */}
+      {companyId && (
+        <div className="w-full">
+          <ComplianceAlertsWidget companyId={companyId} />
+        </div>
+      )}
 
       {/* Widgets Section */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

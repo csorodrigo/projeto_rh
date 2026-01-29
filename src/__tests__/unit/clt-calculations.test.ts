@@ -22,6 +22,14 @@ import {
   isNightTime,
   minutesToDecimalHours,
   CLT_CONSTANTS,
+  calculateOvertimeRegular,
+  calculateOvertimeWeekend,
+  calculateNightShift,
+  calculateTimeBank,
+  validateInterjornada,
+  validateDailyLimit,
+  validateBreak,
+  detectViolations,
   type DailyTimeRecord,
 } from '@/lib/compliance/clt-calculations'
 
@@ -483,5 +491,385 @@ describe('CLT Calculations - Utility Functions', () => {
     const result2 = applyTolerance(495, 480)
     expect(result2.exceedsTolerance).toBe(true)
     expect(result2.adjusted).toBe(495)
+  })
+})
+
+// ============================================================================
+// NOVOS TESTES - FUNCIONALIDADES EXPANDIDAS
+// ============================================================================
+
+describe('CLT Calculations - Overtime Regular (50%)', () => {
+  it('should calculate overtime 50% correctly', () => {
+    const workedMinutes = 600 // 10 hours
+    const expectedMinutes = 480 // 8 hours
+    const hourlyRate = 10.00
+
+    const result = calculateOvertimeRegular(workedMinutes, expectedMinutes, hourlyRate)
+
+    expect(result.overtimeMinutes).toBe(120) // 2 hours overtime
+    expect(result.overtimeValue).toBe(30.00) // 2h * 10.00 * 1.5
+    expect(result.exceedsLimit).toBe(false) // Within 2h limit
+    expect(result.excessMinutes).toBe(0)
+  })
+
+  it('should detect overtime exceeding 2h limit', () => {
+    const workedMinutes = 660 // 11 hours
+    const expectedMinutes = 480 // 8 hours
+    const hourlyRate = 10.00
+
+    const result = calculateOvertimeRegular(workedMinutes, expectedMinutes, hourlyRate)
+
+    expect(result.overtimeMinutes).toBe(180) // 3 hours overtime
+    expect(result.exceedsLimit).toBe(true) // Exceeds 2h limit
+    expect(result.excessMinutes).toBe(60) // 1h excess
+  })
+
+  it('should return zero for no overtime', () => {
+    const workedMinutes = 480 // 8 hours
+    const expectedMinutes = 480 // 8 hours
+    const hourlyRate = 10.00
+
+    const result = calculateOvertimeRegular(workedMinutes, expectedMinutes, hourlyRate)
+
+    expect(result.overtimeMinutes).toBe(0)
+    expect(result.overtimeValue).toBe(0)
+    expect(result.exceedsLimit).toBe(false)
+  })
+})
+
+describe('CLT Calculations - Overtime Weekend (100%)', () => {
+  it('should calculate overtime 100% correctly', () => {
+    const workedMinutes = 480 // 8 hours
+    const hourlyRate = 10.00
+
+    const value = calculateOvertimeWeekend(workedMinutes, hourlyRate)
+
+    expect(value).toBe(160.00) // 8h * 10.00 * 2.0
+  })
+
+  it('should calculate partial hours correctly', () => {
+    const workedMinutes = 270 // 4.5 hours
+    const hourlyRate = 15.00
+
+    const value = calculateOvertimeWeekend(workedMinutes, hourlyRate)
+
+    expect(value).toBe(135.00) // 4.5h * 15.00 * 2.0
+  })
+})
+
+describe('CLT Calculations - Night Shift Bonus', () => {
+  it('should calculate night shift bonus correctly', () => {
+    const startTime = new Date('2024-01-15T22:00:00')
+    const endTime = new Date('2024-01-16T06:00:00')
+    const hourlyRate = 10.00
+
+    const result = calculateNightShift(startTime, endTime, hourlyRate)
+
+    expect(result.nightMinutes).toBeGreaterThan(0)
+    expect(result.adjustedNightMinutes).toBeGreaterThan(result.nightMinutes)
+    expect(result.nightBonus).toBeGreaterThan(0)
+    expect(result.nightHourlyRate).toBe(12.00) // 10.00 * 1.20
+  })
+
+  it('should handle partial night shift', () => {
+    const startTime = new Date('2024-01-15T20:00:00')
+    const endTime = new Date('2024-01-16T02:00:00')
+    const hourlyRate = 12.50
+
+    const result = calculateNightShift(startTime, endTime, hourlyRate)
+
+    expect(result.nightMinutes).toBe(240) // 4 hours (22h-2h)
+    expect(result.nightHourlyRate).toBe(15.00) // 12.50 * 1.20
+  })
+
+  it('should return zero for non-night shift', () => {
+    const startTime = new Date('2024-01-15T08:00:00')
+    const endTime = new Date('2024-01-15T17:00:00')
+    const hourlyRate = 10.00
+
+    const result = calculateNightShift(startTime, endTime, hourlyRate)
+
+    expect(result.nightMinutes).toBe(0)
+    expect(result.nightBonus).toBe(0)
+  })
+})
+
+describe('CLT Calculations - Time Bank', () => {
+  it('should calculate time bank balance correctly', () => {
+    const overtimeMinutes = 600 // 10 hours credit
+    const compensatedMinutes = 120 // 2 hours compensated
+    const maxBalance = 120 * 60 // 120 hours
+
+    const result = calculateTimeBank(overtimeMinutes, compensatedMinutes, maxBalance)
+
+    expect(result.balance).toBe(480) // 10h - 2h = 8h
+    expect(result.toCompensate).toBe(480)
+    expect(result.toPay).toBe(0)
+    expect(result.withinLimit).toBe(true)
+  })
+
+  it('should detect balance exceeding limit', () => {
+    const overtimeMinutes = 8000 // 133+ hours
+    const compensatedMinutes = 0
+    const maxBalance = 120 * 60 // 120 hours
+
+    const result = calculateTimeBank(overtimeMinutes, compensatedMinutes, maxBalance)
+
+    expect(result.balance).toBe(8000)
+    expect(result.toCompensate).toBe(maxBalance)
+    expect(result.toPay).toBeGreaterThan(0)
+    expect(result.withinLimit).toBe(false)
+  })
+
+  it('should handle negative balance (employee debt)', () => {
+    const overtimeMinutes = 100
+    const compensatedMinutes = 300 // More compensated than earned
+    const maxBalance = 120 * 60
+
+    const result = calculateTimeBank(overtimeMinutes, compensatedMinutes, maxBalance)
+
+    expect(result.balance).toBe(-200)
+    expect(result.toCompensate).toBe(200) // Employee owes 200 minutes
+  })
+
+  it('should set expiration date correctly', () => {
+    const overtimeMinutes = 120
+    const compensatedMinutes = 0
+    const referenceDate = new Date('2024-01-15')
+
+    const result = calculateTimeBank(overtimeMinutes, compensatedMinutes, 120 * 60, referenceDate)
+
+    const expectedExpiration = new Date('2024-07-15') // 6 months later
+    expect(result.nextExpiration?.toDateString()).toBe(expectedExpiration.toDateString())
+  })
+})
+
+describe('CLT Calculations - Interjornada Validation', () => {
+  it('should validate correct interjornada (11+ hours)', () => {
+    const exitTime = new Date('2024-01-15T18:00:00')
+    const nextEntryTime = new Date('2024-01-16T08:00:00') // 14 hours later
+
+    const result = validateInterjornada(exitTime, nextEntryTime)
+
+    expect(result.valid).toBe(true)
+    expect(result.hoursRest).toBe(14)
+    expect(result.missingHours).toBe(0)
+    expect(result.countsAsOvertime).toBe(false)
+  })
+
+  it('should detect interjornada violation', () => {
+    const exitTime = new Date('2024-01-15T22:00:00')
+    const nextEntryTime = new Date('2024-01-16T06:00:00') // Only 8 hours
+
+    const result = validateInterjornada(exitTime, nextEntryTime)
+
+    expect(result.valid).toBe(false)
+    expect(result.hoursRest).toBe(8)
+    expect(result.missingHours).toBe(3) // Missing 3 hours
+    expect(result.countsAsOvertime).toBe(true)
+  })
+
+  it('should handle exact 11 hours', () => {
+    const exitTime = new Date('2024-01-15T19:00:00')
+    const nextEntryTime = new Date('2024-01-16T06:00:00') // Exactly 11 hours
+
+    const result = validateInterjornada(exitTime, nextEntryTime)
+
+    expect(result.valid).toBe(true)
+    expect(result.hoursRest).toBe(11)
+    expect(result.missingHours).toBe(0)
+  })
+})
+
+describe('CLT Calculations - Daily Limit Validation', () => {
+  it('should validate correct daily limit', () => {
+    const workedMinutes = 600 // 10 hours (8h + 2h overtime)
+
+    const result = validateDailyLimit(workedMinutes)
+
+    expect(result.valid).toBe(true)
+    expect(result.totalHours).toBe(10)
+    expect(result.excessHours).toBe(0)
+    expect(result.limitHours).toBe(10)
+  })
+
+  it('should detect daily limit violation', () => {
+    const workedMinutes = 660 // 11 hours
+
+    const result = validateDailyLimit(workedMinutes)
+
+    expect(result.valid).toBe(false)
+    expect(result.totalHours).toBe(11)
+    expect(result.excessHours).toBe(1)
+  })
+
+  it('should handle custom normal journey', () => {
+    const workedMinutes = 540 // 9 hours
+    const normalJourneyMinutes = 360 // 6 hours normal
+
+    const result = validateDailyLimit(workedMinutes, normalJourneyMinutes)
+
+    expect(result.valid).toBe(true) // 6h + 2h = 8h limit, worked 9h but close
+    expect(result.limitHours).toBe(8) // 6h + 2h
+  })
+})
+
+describe('CLT Calculations - Break Validation', () => {
+  it('should validate correct break for 6+ hour shift', () => {
+    const workedMinutes = 540 // 9 hours
+    const breakMinutes = 60 // 1 hour
+
+    const result = validateBreak(workedMinutes, breakMinutes)
+
+    expect(result.valid).toBe(true)
+    expect(result.requiredMinutes).toBe(60)
+    expect(result.missingMinutes).toBe(0)
+    expect(result.violation).toBe('none')
+  })
+
+  it('should detect insufficient break', () => {
+    const workedMinutes = 540 // 9 hours
+    const breakMinutes = 30 // Only 30 minutes
+
+    const result = validateBreak(workedMinutes, breakMinutes)
+
+    expect(result.valid).toBe(false)
+    expect(result.missingMinutes).toBe(30)
+    expect(result.violation).toBe('insufficient')
+  })
+
+  it('should validate 15min break for 4-6h shift', () => {
+    const workedMinutes = 300 // 5 hours
+    const breakMinutes = 15
+
+    const result = validateBreak(workedMinutes, breakMinutes)
+
+    expect(result.valid).toBe(true)
+    expect(result.requiredMinutes).toBe(15)
+  })
+
+  it('should detect excessive break', () => {
+    const workedMinutes = 540 // 9 hours
+    const breakMinutes = 150 // 2.5 hours (exceeds 2h max)
+
+    const result = validateBreak(workedMinutes, breakMinutes)
+
+    expect(result.valid).toBe(false)
+    expect(result.violation).toBe('excessive')
+  })
+
+  it('should not require break for short shifts', () => {
+    const workedMinutes = 180 // 3 hours
+    const breakMinutes = 0
+
+    const result = validateBreak(workedMinutes, breakMinutes)
+
+    expect(result.valid).toBe(true)
+    expect(result.requiredMinutes).toBe(0)
+  })
+})
+
+describe('CLT Calculations - Violations Detection', () => {
+  it('should detect no violations for compliant records', () => {
+    const records: DailyTimeRecord[] = [
+      {
+        date: new Date('2024-01-15T00:00:00'),
+        clockIn: new Date('2024-01-15T08:00:00'),
+        clockOut: new Date('2024-01-15T17:00:00'),
+        breakStart: new Date('2024-01-15T12:00:00'),
+        breakEnd: new Date('2024-01-15T13:00:00'),
+        isWorkday: true,
+        isHoliday: false,
+        isSunday: false,
+      },
+      {
+        date: new Date('2024-01-16T00:00:00'),
+        clockIn: new Date('2024-01-16T08:00:00'),
+        clockOut: new Date('2024-01-16T17:00:00'),
+        breakStart: new Date('2024-01-16T12:00:00'),
+        breakEnd: new Date('2024-01-16T13:00:00'),
+        isWorkday: true,
+        isHoliday: false,
+        isSunday: false,
+      },
+    ]
+
+    const violations = detectViolations(records)
+
+    expect(violations.totalViolations).toBe(0)
+    expect(violations.hasCriticalViolations).toBe(false)
+    expect(violations.interjornada).toHaveLength(0)
+    expect(violations.dailyLimit).toHaveLength(0)
+    expect(violations.breaks).toHaveLength(0)
+  })
+
+  it('should detect interjornada violation', () => {
+    const records: DailyTimeRecord[] = [
+      {
+        date: new Date('2024-01-15T00:00:00'),
+        clockIn: new Date('2024-01-15T08:00:00'),
+        clockOut: new Date('2024-01-15T22:00:00'), // Exit at 10pm
+        breakStart: null,
+        breakEnd: null,
+        isWorkday: true,
+        isHoliday: false,
+        isSunday: false,
+      },
+      {
+        date: new Date('2024-01-16T00:00:00'),
+        clockIn: new Date('2024-01-16T06:00:00'), // Entry at 6am (only 8h rest)
+        clockOut: new Date('2024-01-16T15:00:00'),
+        breakStart: null,
+        breakEnd: null,
+        isWorkday: true,
+        isHoliday: false,
+        isSunday: false,
+      },
+    ]
+
+    const violations = detectViolations(records)
+
+    expect(violations.interjornada.length).toBeGreaterThan(0)
+    expect(violations.hasCriticalViolations).toBe(true)
+  })
+
+  it('should detect excessive overtime violation', () => {
+    const records: DailyTimeRecord[] = [
+      {
+        date: new Date('2024-01-15T00:00:00'),
+        clockIn: new Date('2024-01-15T08:00:00'),
+        clockOut: new Date('2024-01-15T21:00:00'), // 13 hours (5h overtime)
+        breakStart: new Date('2024-01-15T12:00:00'),
+        breakEnd: new Date('2024-01-15T13:00:00'),
+        isWorkday: true,
+        isHoliday: false,
+        isSunday: false,
+      },
+    ]
+
+    const violations = detectViolations(records)
+
+    expect(violations.excessiveOvertime.length).toBeGreaterThan(0)
+    expect(violations.totalViolations).toBeGreaterThan(0)
+  })
+
+  it('should detect insufficient break violation', () => {
+    const records: DailyTimeRecord[] = [
+      {
+        date: new Date('2024-01-15T00:00:00'),
+        clockIn: new Date('2024-01-15T08:00:00'),
+        clockOut: new Date('2024-01-15T18:00:00'), // 10 hours
+        breakStart: new Date('2024-01-15T12:00:00'),
+        breakEnd: new Date('2024-01-15T12:30:00'), // Only 30min break
+        isWorkday: true,
+        isHoliday: false,
+        isSunday: false,
+      },
+    ]
+
+    const violations = detectViolations(records)
+
+    expect(violations.breaks.length).toBeGreaterThan(0)
+    expect(violations.hasCriticalViolations).toBe(true)
   })
 })

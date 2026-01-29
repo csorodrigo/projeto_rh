@@ -566,3 +566,491 @@ export function countSundaysAndHolidays(
 
   return count
 }
+
+// ============================================================================
+// NOVAS FUNCIONALIDADES - EXPANSAO CLT
+// ============================================================================
+
+/**
+ * Resultado do calculo de hora extra regular (50%)
+ */
+export interface OvertimeRegularResult {
+  /** Minutos de hora extra trabalhados */
+  overtimeMinutes: number
+  /** Valor monetario da hora extra */
+  overtimeValue: number
+  /** Valor da hora normal */
+  hourlyRate: number
+  /** Indica se excedeu limite de 2h/dia */
+  exceedsLimit: boolean
+  /** Minutos que excedem o limite legal */
+  excessMinutes: number
+}
+
+/**
+ * Calcula hora extra 50% (dias uteis)
+ * CLT Art. 59 - Maximo 2h extras por dia
+ *
+ * @param workedMinutes - Minutos trabalhados no dia
+ * @param expectedMinutes - Minutos esperados para o dia (normalmente 480 = 8h)
+ * @param hourlyRate - Valor da hora normal
+ * @returns Resultado com minutos de HE, valor e alertas
+ */
+export function calculateOvertimeRegular(
+  workedMinutes: number,
+  expectedMinutes: number,
+  hourlyRate: number
+): OvertimeRegularResult {
+  const MAX_OVERTIME_MINUTES = 120 // 2 horas (CLT Art. 59)
+
+  // Calcula minutos acima da jornada esperada
+  const overtimeMinutes = Math.max(0, workedMinutes - expectedMinutes)
+
+  // Verifica se excede limite de 2h/dia
+  const exceedsLimit = overtimeMinutes > MAX_OVERTIME_MINUTES
+  const excessMinutes = Math.max(0, overtimeMinutes - MAX_OVERTIME_MINUTES)
+
+  // Calcula valor: hora normal * 1.5
+  const overtimeHours = minutesToDecimalHours(overtimeMinutes)
+  const overtimeValue = Math.round(overtimeHours * hourlyRate * 1.5 * 100) / 100
+
+  return {
+    overtimeMinutes,
+    overtimeValue,
+    hourlyRate,
+    exceedsLimit,
+    excessMinutes,
+  }
+}
+
+/**
+ * Calcula hora extra 100% (domingos/feriados)
+ * Trabalho em domingo/feriado e 100% a mais
+ *
+ * @param workedMinutes - Minutos trabalhados
+ * @param hourlyRate - Valor da hora normal
+ * @returns Valor monetario da hora extra 100%
+ */
+export function calculateOvertimeWeekend(
+  workedMinutes: number,
+  hourlyRate: number
+): number {
+  const hours = minutesToDecimalHours(workedMinutes)
+  return Math.round(hours * hourlyRate * 2 * 100) / 100
+}
+
+/**
+ * Resultado do calculo de adicional noturno
+ */
+export interface NightShiftResult {
+  /** Minutos trabalhados no periodo noturno (22h-5h) */
+  nightMinutes: number
+  /** Minutos ajustados com reducao noturna */
+  adjustedNightMinutes: number
+  /** Valor do adicional noturno (20%) */
+  nightBonus: number
+  /** Valor da hora com adicional */
+  nightHourlyRate: number
+  /** Horario de inicio do turno */
+  startTime: string
+  /** Horario de fim do turno */
+  endTime: string
+}
+
+/**
+ * Calcula adicional noturno (22h-5h)
+ * CLT Art. 73 - Adicional noturno de 20%
+ * Hora noturna reduzida: 52min30s = 1h para calculo
+ *
+ * @param startTime - Horario de inicio (formato ISO ou Date)
+ * @param endTime - Horario de fim (formato ISO ou Date)
+ * @param hourlyRate - Valor da hora normal
+ * @returns Resultado com minutos noturnos e adicional
+ */
+export function calculateNightShift(
+  startTime: string | Date,
+  endTime: string | Date,
+  hourlyRate: number
+): NightShiftResult {
+  const start = typeof startTime === 'string' ? new Date(startTime) : startTime
+  const end = typeof endTime === 'string' ? new Date(endTime) : endTime
+
+  // Calcula minutos no periodo noturno
+  const nightMinutes = calculateNightMinutes(start, end)
+
+  // Aplica reducao da hora noturna (52min30s = 1h)
+  const adjustedNightMinutes = applyNightReduction(nightMinutes)
+
+  // Calcula adicional de 20%
+  const nightHours = minutesToDecimalHours(adjustedNightMinutes)
+  const nightBonus = Math.round(nightHours * hourlyRate * 0.20 * 100) / 100
+  const nightHourlyRate = Math.round(hourlyRate * 1.20 * 100) / 100
+
+  return {
+    nightMinutes,
+    adjustedNightMinutes,
+    nightBonus,
+    nightHourlyRate,
+    startTime: start.toISOString(),
+    endTime: end.toISOString(),
+  }
+}
+
+/**
+ * Resultado do calculo de banco de horas
+ */
+export interface TimeBankResult {
+  /** Saldo atual em minutos (positivo = credito, negativo = debito) */
+  balance: number
+  /** Minutos a compensar (credito que pode ser usado) */
+  toCompensate: number
+  /** Minutos a pagar (excedeu limite ou prazo) */
+  toPay: number
+  /** Indica se esta dentro do limite */
+  withinLimit: boolean
+  /** Data de expiracao mais proxima */
+  nextExpiration?: Date
+  /** Movimentos que expiraram */
+  expiredMovements: number
+}
+
+/**
+ * Calcula banco de horas
+ * CLT Art. 59 paragrafo 2 - Compensacao em ate 6 meses
+ * Limite: 10h/dia (8h normais + 2h extras)
+ *
+ * @param overtimeMinutes - Minutos de hora extra acumulados
+ * @param compensatedMinutes - Minutos ja compensados
+ * @param maxBalanceMinutes - Limite maximo do banco (padrao: 120h)
+ * @param referenceDate - Data de referencia para calculo de expiracao
+ * @returns Resultado com saldos e alertas
+ */
+export function calculateTimeBank(
+  overtimeMinutes: number,
+  compensatedMinutes: number,
+  maxBalanceMinutes: number = 120 * 60, // 120 horas
+  referenceDate: Date = new Date()
+): TimeBankResult {
+  const COMPENSATION_PERIOD_MONTHS = 6
+  const balance = overtimeMinutes - compensatedMinutes
+
+  // Verifica se esta dentro do limite
+  const withinLimit = Math.abs(balance) <= maxBalanceMinutes
+
+  // Calcula o que pode ser compensado vs o que deve ser pago
+  let toCompensate = 0
+  let toPay = 0
+
+  if (balance > 0) {
+    // Credito: pode compensar ate o limite
+    if (withinLimit) {
+      toCompensate = balance
+      toPay = 0
+    } else {
+      toCompensate = maxBalanceMinutes
+      toPay = balance - maxBalanceMinutes
+    }
+  } else {
+    // Debito: funcionario deve horas
+    toCompensate = Math.abs(balance)
+    toPay = 0
+  }
+
+  // Calcula data de expiracao (6 meses a partir da referencia)
+  const nextExpiration = new Date(referenceDate)
+  nextExpiration.setMonth(nextExpiration.getMonth() + COMPENSATION_PERIOD_MONTHS)
+
+  // Simula movimentos expirados (simplificado)
+  const expiredMovements = toPay
+
+  return {
+    balance,
+    toCompensate,
+    toPay,
+    withinLimit,
+    nextExpiration,
+    expiredMovements,
+  }
+}
+
+/**
+ * Calcula DSR sobre horas extras
+ * DSR = Descanso Semanal Remunerado
+ * Formula: (total HE do mes / dias uteis) * domingos e feriados
+ *
+ * @param overtimeValue - Valor total de horas extras no mes
+ * @param workedDays - Dias uteis trabalhados no mes
+ * @param month - Mes de referencia (1-12)
+ * @param year - Ano de referencia
+ * @param customHolidays - Feriados customizados
+ * @returns Valor do DSR
+ */
+export function calculateDSREnhanced(
+  overtimeValue: number,
+  workedDays: number,
+  month: number,
+  year: number,
+  customHolidays: Date[] = []
+): number {
+  if (workedDays === 0 || overtimeValue === 0) return 0
+
+  // Calcula primeiro e ultimo dia do mes
+  const firstDay = new Date(year, month - 1, 1)
+  const lastDay = new Date(year, month, 0)
+
+  // Conta domingos e feriados do mes
+  const sundaysAndHolidays = countSundaysAndHolidays(firstDay, lastDay, customHolidays)
+
+  // Formula: (HE / dias uteis) * domingos e feriados
+  return Math.round((overtimeValue / workedDays) * sundaysAndHolidays * 100) / 100
+}
+
+/**
+ * Resultado da validacao de interjornada
+ */
+export interface InterjornadaResult {
+  /** Se cumpre o minimo de 11h entre jornadas */
+  valid: boolean
+  /** Horas de descanso entre jornadas */
+  hoursRest: number
+  /** Horas faltantes para cumprir as 11h */
+  missingHours: number
+  /** Data/hora de saida da jornada anterior */
+  exitTime: Date
+  /** Data/hora de entrada da proxima jornada */
+  nextEntryTime: Date
+  /** Se viola CLT, proxima jornada conta como extra */
+  countsAsOvertime: boolean
+}
+
+/**
+ * Valida interjornada (intervalo entre jornadas)
+ * CLT Art. 66 - Minimo 11h de descanso entre jornadas
+ * Se violar, a proxima jornada pode contar como hora extra
+ *
+ * @param exitTime - Horario de saida da jornada anterior
+ * @param nextEntryTime - Horario de entrada da proxima jornada
+ * @returns Resultado da validacao
+ */
+export function validateInterjornada(
+  exitTime: Date,
+  nextEntryTime: Date
+): InterjornadaResult {
+  const MIN_REST_HOURS = 11
+
+  // Calcula diferenca em minutos
+  const restMinutes = getMinutesDiff(exitTime, nextEntryTime)
+  const hoursRest = restMinutes / 60
+
+  // Valida se cumpre o minimo
+  const valid = hoursRest >= MIN_REST_HOURS
+  const missingHours = Math.max(0, MIN_REST_HOURS - hoursRest)
+
+  // Se violar, a proxima jornada pode contar como extra
+  const countsAsOvertime = !valid
+
+  return {
+    valid,
+    hoursRest: Math.round(hoursRest * 100) / 100,
+    missingHours: Math.round(missingHours * 100) / 100,
+    exitTime,
+    nextEntryTime,
+    countsAsOvertime,
+  }
+}
+
+/**
+ * Resultado da validacao de limite diario
+ */
+export interface DailyLimitResult {
+  /** Se cumpre limite de 10h/dia (8h + 2h extras) */
+  valid: boolean
+  /** Total de horas trabalhadas */
+  totalHours: number
+  /** Horas que excedem o limite */
+  excessHours: number
+  /** Limite aplicavel */
+  limitHours: number
+}
+
+/**
+ * Valida limite de jornada diaria
+ * CLT Art. 59 - Maximo 2h extras por dia (total 10h)
+ *
+ * @param workedMinutes - Minutos trabalhados no dia
+ * @param normalJourneyMinutes - Jornada normal (padrao: 480 = 8h)
+ * @returns Resultado da validacao
+ */
+export function validateDailyLimit(
+  workedMinutes: number,
+  normalJourneyMinutes: number = 480
+): DailyLimitResult {
+  const MAX_OVERTIME_MINUTES = 120 // 2h extras
+  const limitMinutes = normalJourneyMinutes + MAX_OVERTIME_MINUTES
+
+  const valid = workedMinutes <= limitMinutes
+  const excessMinutes = Math.max(0, workedMinutes - limitMinutes)
+
+  return {
+    valid,
+    totalHours: minutesToDecimalHours(workedMinutes),
+    excessHours: minutesToDecimalHours(excessMinutes),
+    limitHours: minutesToDecimalHours(limitMinutes),
+  }
+}
+
+/**
+ * Resultado da validacao de intervalo
+ */
+export interface BreakValidationResult {
+  /** Se o intervalo esta conforme a CLT */
+  valid: boolean
+  /** Minutos de intervalo realizados */
+  breakMinutes: number
+  /** Minutos minimos exigidos */
+  requiredMinutes: number
+  /** Minutos faltantes */
+  missingMinutes: number
+  /** Tipo de violacao */
+  violation?: 'insufficient' | 'excessive' | 'none'
+}
+
+/**
+ * Valida intervalo intrajornada
+ * CLT Art. 71:
+ * - Jornada > 6h: 1h a 2h de intervalo
+ * - Jornada 4h a 6h: 15min de intervalo
+ * - Jornada < 4h: sem intervalo obrigatorio
+ *
+ * @param workedMinutes - Minutos trabalhados
+ * @param breakMinutes - Minutos de intervalo
+ * @returns Resultado da validacao
+ */
+export function validateBreak(
+  workedMinutes: number,
+  breakMinutes: number
+): BreakValidationResult {
+  let requiredMinutes = 0
+  let maxMinutes = 0
+
+  if (workedMinutes > 360) {
+    // Mais de 6h
+    requiredMinutes = CLT_CONSTANTS.MIN_BREAK_OVER_6H // 60min
+    maxMinutes = CLT_CONSTANTS.MAX_BREAK_OVER_6H // 120min
+  } else if (workedMinutes >= 240) {
+    // 4h a 6h
+    requiredMinutes = CLT_CONSTANTS.MIN_BREAK_4_TO_6H // 15min
+    maxMinutes = 30 // razoavel
+  }
+
+  const valid = breakMinutes >= requiredMinutes && breakMinutes <= maxMinutes
+  const missingMinutes = Math.max(0, requiredMinutes - breakMinutes)
+
+  let violation: 'insufficient' | 'excessive' | 'none' = 'none'
+  if (breakMinutes < requiredMinutes) {
+    violation = 'insufficient'
+  } else if (breakMinutes > maxMinutes && maxMinutes > 0) {
+    violation = 'excessive'
+  }
+
+  return {
+    valid,
+    breakMinutes,
+    requiredMinutes,
+    missingMinutes,
+    violation,
+  }
+}
+
+/**
+ * Resultado consolidado de violacoes CLT
+ */
+export interface ComplianceViolations {
+  /** Violacoes de interjornada */
+  interjornada: InterjornadaResult[]
+  /** Violacoes de limite diario */
+  dailyLimit: DailyLimitResult[]
+  /** Violacoes de intervalo */
+  breaks: BreakValidationResult[]
+  /** Dias com hora extra acima de 2h */
+  excessiveOvertime: Date[]
+  /** Total de violacoes */
+  totalViolations: number
+  /** Se ha violacoes criticas */
+  hasCriticalViolations: boolean
+}
+
+/**
+ * Detecta violacoes trabalhistas em um conjunto de registros
+ *
+ * @param records - Registros de ponto do periodo
+ * @returns Consolidado de violacoes
+ */
+export function detectViolations(
+  records: DailyTimeRecord[]
+): ComplianceViolations {
+  const violations: ComplianceViolations = {
+    interjornada: [],
+    dailyLimit: [],
+    breaks: [],
+    excessiveOvertime: [],
+    totalViolations: 0,
+    hasCriticalViolations: false,
+  }
+
+  // Ordena por data
+  const sorted = [...records].sort((a, b) => a.date.getTime() - b.date.getTime())
+
+  for (let i = 0; i < sorted.length; i++) {
+    const record = sorted[i]
+
+    if (!record.clockIn || !record.clockOut) continue
+
+    // Valida interjornada
+    if (i > 0 && sorted[i - 1].clockOut) {
+      const interjornada = validateInterjornada(
+        sorted[i - 1].clockOut!,
+        record.clockIn
+      )
+
+      if (!interjornada.valid) {
+        violations.interjornada.push(interjornada)
+        violations.totalViolations++
+        violations.hasCriticalViolations = true
+      }
+    }
+
+    // Valida limite diario
+    const workedMinutes = getMinutesDiff(record.clockIn, record.clockOut)
+    const dailyLimit = validateDailyLimit(workedMinutes)
+
+    if (!dailyLimit.valid) {
+      violations.dailyLimit.push(dailyLimit)
+      violations.totalViolations++
+    }
+
+    // Valida intervalo
+    if (record.breakStart && record.breakEnd) {
+      const breakMinutes = getMinutesDiff(record.breakStart, record.breakEnd)
+      const breakValidation = validateBreak(workedMinutes, breakMinutes)
+
+      if (!breakValidation.valid) {
+        violations.breaks.push(breakValidation)
+        violations.totalViolations++
+
+        if (breakValidation.violation === 'insufficient') {
+          violations.hasCriticalViolations = true
+        }
+      }
+    }
+
+    // Verifica hora extra excessiva
+    const daily = calculateDailyJourney(record)
+    if (daily.overtime50Minutes > 120 || daily.overtime100Minutes > 120) {
+      violations.excessiveOvertime.push(record.date)
+      violations.totalViolations++
+    }
+  }
+
+  return violations
+}

@@ -115,6 +115,21 @@ export {
 } from './aej-generator'
 
 // ============================================================================
+// AEJ XML Generator - Arquivo Eletronico de Jornada (e-Social)
+// ============================================================================
+export {
+  type ESocialEnvironment,
+  type ProcessEmissionType,
+  type AEJXMLConfig,
+  type AEJXMLData,
+  type ContractualSchedule,
+  type WorkJourneyRecord,
+  type AEJXMLResult,
+  AEJXMLGenerator,
+  generateAEJXML,
+} from './aej-xml-generator'
+
+// ============================================================================
 // Validators - Validacao de integridade
 // ============================================================================
 export {
