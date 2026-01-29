@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Download, FileText, AlertCircle, CheckCircle2 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import {
   AEJXMLGenerator,
   type AEJXMLData,
@@ -26,7 +26,6 @@ import {
 } from '@/lib/supabase/queries/compliance'
 
 export default function AEJPage() {
-  const { toast } = useToast()
 
   const [loading, setLoading] = useState(false)
   const [validating, setValidating] = useState(false)
