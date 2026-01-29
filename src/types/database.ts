@@ -555,17 +555,34 @@ export interface MedicalCertificate {
   id: string;
   employee_id: string;
   company_id: string;
-  certificate_date: string;
-  days_off: number;
   start_date: string;
   end_date: string;
+  total_days: number;
+  cid_code: string | null;
+  cid_description: string | null;
+  show_cid: boolean | null;
   doctor_name: string;
-  doctor_crm: string;
-  diagnosis: string | null;
-  document_url: string | null;
-  notes: string | null;
+  crm: string;
+  crm_state: string | null;
+  healthcare_facility: string | null;
+  facility_type: string | null;
+  certificate_type: string | null;
+  medical_notes: string | null;
+  internal_notes: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  is_validated: boolean | null;
+  validated_by: string | null;
+  validated_at: string | null;
+  validation_notes: string | null;
+  absence_id: string | null;
+  requires_inss: boolean | null;
+  inss_protocol: string | null;
+  inss_start_date: string | null;
+  inss_status: string | null;
   created_at: string;
   updated_at: string;
+  submitted_by: string | null;
 }
 
 export interface EvaluationCycle {

@@ -382,17 +382,17 @@ export default function HealthPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {new Date(cert.certificate_date).toLocaleDateString("pt-BR")}
+                          {new Date(cert.start_date).toLocaleDateString("pt-BR")}
                         </TableCell>
                         <TableCell>
                           {new Date(cert.start_date).toLocaleDateString("pt-BR")} -{" "}
                           {new Date(cert.end_date).toLocaleDateString("pt-BR")}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{cert.days_off} dia(s)</Badge>
+                          <Badge variant="outline">{cert.total_days} dia(s)</Badge>
                         </TableCell>
                         <TableCell>{cert.doctor_name}</TableCell>
-                        <TableCell>{cert.doctor_crm}</TableCell>
+                        <TableCell>{cert.crm}</TableCell>
                         <TableCell>
                           <Button size="sm" variant="outline">
                             Ver

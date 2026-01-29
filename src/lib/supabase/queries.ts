@@ -498,7 +498,7 @@ export async function getEmployeeMedicalCertificates(
     .from('medical_certificates')
     .select('*')
     .eq('employee_id', employeeId)
-    .order('certificate_date', { ascending: false });
+    .order('start_date', { ascending: false });
 
   return {
     data,
@@ -620,18 +620,18 @@ export async function listCompanyMedicalCertificates(
       )
     `)
     .eq('company_id', companyId)
-    .order('certificate_date', { ascending: false });
+    .order('start_date', { ascending: false });
 
   if (filters?.employeeId) {
     query = query.eq('employee_id', filters.employeeId);
   }
 
   if (filters?.startDate) {
-    query = query.gte('certificate_date', filters.startDate);
+    query = query.gte('start_date', filters.startDate);
   }
 
   if (filters?.endDate) {
-    query = query.lte('certificate_date', filters.endDate);
+    query = query.lte('start_date', filters.endDate);
   }
 
   const { data, error } = await query;
@@ -719,9 +719,9 @@ export async function getHealthStats(companyId: string): Promise<{
   // Get certificates this month
   const { data: certificates } = await supabase
     .from('medical_certificates')
-    .select('days_off')
+    .select('total_days')
     .eq('company_id', companyId)
-    .gte('certificate_date', firstDayOfMonth.toISOString().split('T')[0]);
+    .gte('start_date', firstDayOfMonth.toISOString().split('T')[0]);
 
   const totalASOs = asos?.length || 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -737,7 +737,7 @@ export async function getHealthStats(companyId: string): Promise<{
 
   const certificatesThisMonth = certificates?.length || 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const totalDaysOff = certificates?.reduce((sum: number, cert: any) => sum + (cert.days_off || 0), 0) || 0;
+  const totalDaysOff = certificates?.reduce((sum: number, cert: any) => sum + (cert.total_days || 0), 0) || 0;
 
   return {
     totalASOs,
