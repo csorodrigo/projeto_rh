@@ -57,8 +57,8 @@ import {
   type DashboardStats,
   type RecentActivity as RecentActivityType,
 } from "@/lib/supabase/queries"
-import { BirthdaysWidget } from "@/components/dashboard/birthdays-widget"
-import { AbsentTodayWidget } from "@/components/dashboard/absent-today-widget"
+import { WidgetsContainer } from "@/components/dashboard/widgets-container"
+import { StatsContainer } from "@/components/dashboard/stats-container"
 
 interface StatCardProps {
   title: string
@@ -489,50 +489,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Real Data from Supabase */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Funcionários"
-          value={stats.totalEmployees}
-          description="Funcionários ativos"
-          icon={Users}
-          trend={{
-            value: 5,
-            label: "vs. mês passado",
-            isPositive: true,
-          }}
-        />
-        <StatCard
-          title="Presentes Hoje"
-          value={stats.presentToday}
-          description={`${stats.attendanceRate}% de presença`}
-          icon={UserCheck}
-          variant="success"
-          trend={{
-            value: 12,
-            label: "vs. ontem",
-            isPositive: true,
-          }}
-        />
-        <StatCard
-          title="Férias/Ausentes"
-          value={stats.absentToday}
-          description="Funcionários ausentes hoje"
-          icon={Plane}
-          variant="warning"
-          trend={{
-            value: 3,
-            label: "vs. semana passada",
-            isPositive: false,
-          }}
-        />
-        <StatCard
-          title="ASOs Vencendo"
-          value={stats.expiringASOs}
-          description="Nos próximos 30 dias"
-          icon={AlertTriangle}
-          variant="danger"
-        />
+        <StatsContainer />
       </div>
 
       {/* Charts Section */}
@@ -684,11 +643,8 @@ export default function DashboardPage() {
 
       {/* Widgets Section */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Birthdays Widget */}
-        <BirthdaysWidget birthdays={mockBirthdays} />
-
-        {/* Absent Today Widget */}
-        <AbsentTodayWidget absentees={mockAbsentees} />
+        {/* Widgets with Real Data */}
+        <WidgetsContainer />
 
         {/* Upcoming Events */}
         <Card className="transition-all duration-300 hover:shadow-lg">
