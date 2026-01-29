@@ -75,13 +75,13 @@ const navigationItems: NavigationItem[] = [
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
-    iconColor: "text-blue-500",
+    iconColor: "text-purple-600",
   },
   {
     title: "Funcionários",
     url: "/funcionarios",
     icon: Users,
-    iconColor: "text-green-500",
+    iconColor: "text-blue-600",
     items: [
       { title: "Lista", url: "/funcionarios" },
       { title: "Organograma", url: "/funcionarios/organograma" },
@@ -92,7 +92,7 @@ const navigationItems: NavigationItem[] = [
     title: "Ponto",
     url: "/ponto",
     icon: Clock,
-    iconColor: "text-purple-500",
+    iconColor: "text-green-600",
     items: [
       { title: "Hoje", url: "/ponto" },
       { title: "Histórico", url: "/ponto/historico" },
@@ -103,7 +103,7 @@ const navigationItems: NavigationItem[] = [
     title: "Ausências",
     url: "/ausencias",
     icon: Calendar,
-    iconColor: "text-orange-500",
+    iconColor: "text-orange-600",
     badge: { count: 5, variant: "destructive" },
     items: [
       { title: "Lista", url: "/ausencias" },
@@ -115,26 +115,26 @@ const navigationItems: NavigationItem[] = [
     title: "PDI",
     url: "/pdi",
     icon: Target,
-    iconColor: "text-cyan-500",
+    iconColor: "text-pink-600",
   },
   {
     title: "Saúde",
     url: "/saude",
     icon: Heart,
-    iconColor: "text-red-500",
+    iconColor: "text-red-600",
     badge: { count: 3, variant: "secondary" },
   },
   {
     title: "Folha",
     url: "/folha",
     icon: DollarSign,
-    iconColor: "text-emerald-500",
+    iconColor: "text-emerald-600",
   },
   {
     title: "Relatórios",
     url: "/relatorios",
     icon: BarChart3,
-    iconColor: "text-indigo-500",
+    iconColor: "text-indigo-600",
   },
 ]
 

@@ -57,6 +57,8 @@ import {
   type DashboardStats,
   type RecentActivity as RecentActivityType,
 } from "@/lib/supabase/queries"
+import { BirthdaysWidget } from "@/components/dashboard/birthdays-widget"
+import { AbsentTodayWidget } from "@/components/dashboard/absent-today-widget"
 
 interface StatCardProps {
   title: string
@@ -81,37 +83,37 @@ function StatCard({
 }: StatCardProps) {
   const variantStyles = {
     default: {
-      bg: "bg-blue-500/10 hover:bg-blue-500/20",
-      text: "text-blue-600",
-      border: "border-blue-500/20",
+      bg: "bg-blue-100 dark:bg-blue-950",
+      text: "text-blue-600 dark:text-blue-400",
+      iconBg: "bg-blue-500/10 hover:bg-blue-500/20 dark:bg-blue-500/20 dark:hover:bg-blue-500/30",
     },
     success: {
-      bg: "bg-green-500/10 hover:bg-green-500/20",
-      text: "text-green-600",
-      border: "border-green-500/20",
+      bg: "bg-green-100 dark:bg-green-950",
+      text: "text-green-600 dark:text-green-400",
+      iconBg: "bg-green-500/10 hover:bg-green-500/20 dark:bg-green-500/20 dark:hover:bg-green-500/30",
     },
     warning: {
-      bg: "bg-amber-500/10 hover:bg-amber-500/20",
-      text: "text-amber-600",
-      border: "border-amber-500/20",
+      bg: "bg-amber-100 dark:bg-amber-950",
+      text: "text-amber-600 dark:text-amber-400",
+      iconBg: "bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-500/20 dark:hover:bg-amber-500/30",
     },
     danger: {
-      bg: "bg-red-500/10 hover:bg-red-500/20",
-      text: "text-red-600",
-      border: "border-red-500/20",
+      bg: "bg-red-100 dark:bg-red-950",
+      text: "text-red-600 dark:text-red-400",
+      iconBg: "bg-red-500/10 hover:bg-red-500/20 dark:bg-red-500/20 dark:hover:bg-red-500/30",
     },
   }
 
   const styles = variantStyles[variant]
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-lg border-2 hover:border-opacity-100">
+    <Card className="transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
         <div
-          className={`rounded-xl p-3 transition-colors ${styles.bg} ${styles.border} border-2`}
+          className={`rounded-full p-3 transition-all duration-200 ${styles.iconBg}`}
         >
           <Icon className={`size-6 ${styles.text}`} />
         </div>
@@ -124,12 +126,12 @@ function StatCard({
         {trend && (
           <div className="flex items-center gap-1.5 mt-3">
             {trend.isPositive !== false ? (
-              <div className="flex items-center gap-1 text-green-600">
+              <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                 <TrendingUp className="size-4" />
                 <span className="text-sm font-semibold">+{trend.value}%</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-red-600">
+              <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
                 <TrendingDown className="size-4" />
                 <span className="text-sm font-semibold">{trend.value}%</span>
               </div>
@@ -323,6 +325,42 @@ const upcomingEvents: UpcomingEvent[] = [
     title: "Férias - Ana Paula",
     date: "2024-02-25",
     description: "10 dias de férias",
+  },
+]
+
+// Mock data for birthdays
+const mockBirthdays = [
+  {
+    id: "1",
+    name: "Pedro Costa",
+    initials: "PC",
+    age: 35,
+    date: "18 de Fevereiro",
+  },
+  {
+    id: "2",
+    name: "Ana Silva",
+    initials: "AS",
+    age: 28,
+    date: "20 de Fevereiro",
+  },
+]
+
+// Mock data for absent employees
+const mockAbsentees = [
+  {
+    id: "1",
+    name: "João Silva",
+    initials: "JS",
+    reason: "vacation" as const,
+    reason_label: "Férias",
+  },
+  {
+    id: "2",
+    name: "Maria Santos",
+    initials: "MS",
+    reason: "medical" as const,
+    reason_label: "Atestado Médico",
   },
 ]
 
@@ -644,30 +682,30 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Bottom Section */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Quick Actions */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-            <CardDescription>Acesse as funcionalidades mais usadas</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            {quickActions.map((action) => (
-              <QuickAction key={action.title} {...action} />
-            ))}
-          </CardContent>
-        </Card>
+      {/* Widgets Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Birthdays Widget */}
+        <BirthdaysWidget birthdays={mockBirthdays} />
+
+        {/* Absent Today Widget */}
+        <AbsentTodayWidget absentees={mockAbsentees} />
 
         {/* Upcoming Events */}
-        <Card className="lg:col-span-1">
+        <Card className="transition-all duration-300 hover:shadow-lg">
           <CardHeader>
-            <CardTitle>Próximos Eventos</CardTitle>
-            <CardDescription>Datas importantes e agendamentos</CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-950">
+                <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Próximos Eventos</CardTitle>
+                <CardDescription>Datas importantes</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingEvents.map((event) => {
+              {upcomingEvents.slice(0, 3).map((event) => {
                 const Icon = getEventIcon(event.type)
                 return (
                   <div key={event.id} className="flex items-start gap-3">
@@ -704,8 +742,26 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Quick Actions */}
+        <Card className="transition-all duration-300 hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-base">Ações Rápidas</CardTitle>
+            <CardDescription>Funcionalidades mais usadas</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            {quickActions.map((action) => (
+              <QuickAction key={action.title} {...action} />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Section */}
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Recent Activity */}
-        <RecentActivityList items={recentActivity} />
+        <div className="lg:col-span-3">
+          <RecentActivityList items={recentActivity} />
+        </div>
       </div>
     </div>
   )

@@ -3,6 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import {
   Bell,
   Search,
@@ -12,6 +14,7 @@ import {
   UserPlus,
   Clock,
   Plus,
+  Calendar as CalendarIcon,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -30,6 +33,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
+import { SearchCommand } from "@/components/search-command"
 
 const routeLabels: Record<string, string> = {
   dashboard: "Dashboard",
@@ -62,6 +66,16 @@ export function Header({
   const router = useRouter()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [showSearch, setShowSearch] = React.useState(false)
+  const [currentTime, setCurrentTime] = React.useState(new Date())
+
+  // Update clock every second
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   const [notifications] = React.useState([
     {
@@ -137,10 +151,23 @@ export function Header({
       <Breadcrumb items={breadcrumbs} className="hidden sm:flex" />
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Date and Time */}
+        <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground mr-2">
+          <CalendarIcon className="size-4" />
+          <span>
+            {format(currentTime, "PPP 'às' HH:mm:ss", { locale: ptBR })}
+          </span>
+        </div>
+
+        {/* Search Command */}
+        <div className="hidden md:block">
+          <SearchCommand />
+        </div>
+
         {/* Quick Actions */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="default" size="sm" className="hidden md:flex gap-2">
+            <Button variant="default" size="sm" className="hidden lg:flex gap-2 bg-green-600 hover:bg-green-700 text-white">
               <Plus className="size-4" />
               Novo
             </Button>
@@ -158,46 +185,6 @@ export function Header({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {/* Search */}
-        {showSearch ? (
-          <form onSubmit={handleSearch} className="relative md:w-64 w-48">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar..."
-              className="pl-8 pr-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-              onBlur={() => {
-                if (!searchQuery) setShowSearch(false)
-              }}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-0 top-0 h-full"
-              onClick={() => {
-                setSearchQuery("")
-                setShowSearch(false)
-              }}
-            >
-              <span className="sr-only">Fechar busca</span>
-              ×
-            </Button>
-          </form>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowSearch(true)}
-          >
-            <Search className="size-4" />
-            <span className="sr-only">Buscar</span>
-          </Button>
-        )}
 
         {/* Notifications */}
         <DropdownMenu>

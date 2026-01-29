@@ -79,6 +79,18 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Sesame HR Color Palette */
+  --purple-primary: 124 58 237; /* #7c3aed */
+  --purple-light: 243 232 255; /* #f3e8ff */
+  --green-primary: 16 185 129; /* #10b981 */
+  --blue-accent: 59 130 246; /* #3b82f6 */
+  --orange-accent: 249 115 22; /* #f97316 */
+  --red-accent: 239 68 68; /* #ef4444 */
+  --pink-accent: 236 72 153; /* #ec4899 */
+  --cyan-accent: 6 182 212; /* #06b6d4 */
+  --emerald-accent: 16 185 129; /* #10b981 */
+  --indigo-accent: 99 102 241; /* #6366f1 */
 }
 
 .dark {
