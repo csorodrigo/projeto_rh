@@ -16,6 +16,14 @@ export const metadata: Metadata = {
     template: "%s | Sistema RH",
   },
   description: "Sistema de gestao de recursos humanos",
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/icon.png',
+    shortcut: '/favicon.png',
+  },
 }
 
 export default function RootLayout({
