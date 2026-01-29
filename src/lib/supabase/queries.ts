@@ -2071,7 +2071,7 @@ export async function getOrCreatePayrollPeriod(
     .eq('year', year)
     .eq('month', month)
     .eq('period_type', periodType)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     return { data: existing, error: null };
@@ -2394,7 +2394,7 @@ export async function listCompanyPDIs(
     .select(
       `
       *,
-      employees!inner(full_name, department, photo_url)
+      employees!pdis_employee_id_fkey!inner(full_name, department, photo_url)
     `
     )
     .eq('company_id', companyId)
@@ -2439,7 +2439,7 @@ export async function getPDIById(
     .select(
       `
       *,
-      employees!inner(full_name, department, photo_url)
+      employees!pdis_employee_id_fkey!inner(full_name, department, photo_url)
     `
     )
     .eq('id', pdiId)
@@ -2638,7 +2638,7 @@ export async function createPDI(
     .select(
       `
       *,
-      employees!inner(full_name, department, photo_url)
+      employees!pdis_employee_id_fkey!inner(full_name, department, photo_url)
     `
     )
     .single();
