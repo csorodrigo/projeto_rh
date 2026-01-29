@@ -260,7 +260,7 @@ export default function HealthPage() {
                   </TableHeader>
                   <TableBody>
                     {asos.map((aso) => {
-                      const badge = getExpirationBadge(aso.expiration_date)
+                      const badge = getExpirationBadge(aso.expiry_date)
                       return (
                         <TableRow key={aso.id}>
                           <TableCell>
@@ -294,7 +294,7 @@ export default function HealthPage() {
                             {new Date(aso.exam_date).toLocaleDateString("pt-BR")}
                           </TableCell>
                           <TableCell>
-                            {new Date(aso.expiration_date).toLocaleDateString("pt-BR")}
+                            {new Date(aso.expiry_date).toLocaleDateString("pt-BR")}
                           </TableCell>
                           <TableCell>
                             <Badge
