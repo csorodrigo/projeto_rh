@@ -47,6 +47,30 @@ export type AbsenceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'can
 export type EvaluationStatus = 'draft' | 'in_progress' | 'completed' | 'cancelled';
 export type PDIStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 
+// Notification Types
+export type NotificationType =
+  | 'birthday'
+  | 'work_anniversary'
+  | 'vacation_expiring'
+  | 'absence_pending'
+  | 'absence_approved'
+  | 'absence_rejected'
+  | 'time_missing'
+  | 'compliance_violation'
+  | 'document_expiring'
+  | 'aso_expiring'
+  | 'new_employee'
+  | 'payroll_ready'
+  | 'system';
+
+export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type EmailDigestFrequency = 'instant' | 'hourly' | 'daily' | 'weekly';
+
+// Workflow Types
+export type WorkflowType = 'absence' | 'overtime' | 'time_adjustment' | 'document_approval' | 'data_change';
+export type WorkflowStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type WorkflowDecision = 'approved' | 'rejected' | 'skipped';
+
 // Time Tracking Types
 export type TimeRecordStatus = 'pending' | 'approved' | 'rejected' | 'adjusted';
 export type ClockType = 'clock_in' | 'clock_out' | 'break_start' | 'break_end';
@@ -839,6 +863,192 @@ export interface PresenceStatus {
   last_action_time: string | null;
 }
 
+// Notification Interfaces
+export interface Notification {
+  id: string;
+  company_id: string;
+  user_id: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  title: string;
+  message: string;
+  link: string | null;
+  action_text: string | null;
+  metadata: Record<string, unknown>;
+  read: boolean;
+  read_at: string | null;
+  archived: boolean;
+  archived_at: string | null;
+  email_sent: boolean;
+  email_sent_at: string | null;
+  email_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationPreferences {
+  id: string;
+  user_id: string;
+  company_id: string;
+  enable_in_app: boolean;
+  enable_email: boolean;
+  enable_push: boolean;
+  notify_birthdays: boolean;
+  notify_work_anniversaries: boolean;
+  notify_vacation_expiring: boolean;
+  notify_absences: boolean;
+  notify_time_tracking: boolean;
+  notify_compliance: boolean;
+  notify_documents: boolean;
+  notify_payroll: boolean;
+  notify_system: boolean;
+  email_digest: boolean;
+  email_digest_frequency: EmailDigestFrequency;
+  email_digest_time: string;
+  do_not_disturb_enabled: boolean;
+  do_not_disturb_start: string | null;
+  do_not_disturb_end: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationLog {
+  id: string;
+  notification_id: string | null;
+  company_id: string;
+  user_id: string;
+  channel: 'in_app' | 'email' | 'push';
+  status: 'sent' | 'failed' | 'bounced';
+  error_message: string | null;
+  email_to: string | null;
+  email_subject: string | null;
+  provider_response: Record<string, unknown> | null;
+  sent_at: string;
+}
+
+// Workflow Interfaces
+export interface WorkflowStep {
+  level: number;
+  role: UserRole;
+  sla: number; // hours
+  name: string;
+}
+
+export interface WorkflowRules {
+  skipIfAmount?: {
+    field: string;
+    operator: '<' | '>' | '<=' | '>=' | '=' | '!=';
+    value: number;
+  };
+  autoApprove?: {
+    field: string;
+    operator: '<' | '>' | '<=' | '>=' | '=' | '!=';
+    value: number;
+  };
+  requireAll?: boolean; // Se todos os aprovadores do nível devem aprovar
+}
+
+export interface WorkflowDefinition {
+  id: string;
+  type: WorkflowType;
+  name: string;
+  description: string | null;
+  steps: WorkflowStep[];
+  rules: WorkflowRules;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowInstance {
+  id: string;
+  company_id: string;
+  workflow_type: WorkflowType;
+  entity_type: string;
+  entity_id: string;
+  requester_id: string;
+  current_step: number;
+  total_steps: number;
+  status: WorkflowStatus;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  sla_due_at: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface WorkflowApproval {
+  id: string;
+  instance_id: string;
+  step_level: number;
+  approver_id: string;
+  decision: WorkflowDecision | null;
+  comments: string | null;
+  decided_at: string | null;
+  created_at: string;
+  sla_due_at: string | null;
+  delegated_from: string | null;
+}
+
+export interface WorkflowDelegation {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  start_date: string;
+  end_date: string;
+  active: boolean;
+  reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowHistory {
+  id: string;
+  instance_id: string;
+  action: string;
+  performed_by: string | null;
+  old_status: WorkflowStatus | null;
+  new_status: WorkflowStatus | null;
+  step_level: number | null;
+  comments: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+// Extended Workflow Types with Relations
+export interface WorkflowInstanceWithDetails extends WorkflowInstance {
+  requester: {
+    id: string;
+    name: string;
+    email: string;
+    avatar_url: string | null;
+    department: string | null;
+  };
+  approvals: Array<WorkflowApproval & {
+    approver: {
+      id: string;
+      name: string;
+      email: string;
+      avatar_url: string | null;
+      role: UserRole;
+    };
+  }>;
+  definition: WorkflowDefinition;
+}
+
+export interface PendingApproval extends WorkflowApproval {
+  instance: WorkflowInstance & {
+    requester: {
+      id: string;
+      name: string;
+      email: string;
+      avatar_url: string | null;
+      department: string | null;
+    };
+  };
+  entity_data: Record<string, unknown>;
+}
+
 // Database type definition
 export interface Database {
   public: {
@@ -993,6 +1203,49 @@ export interface Database {
         };
         Update: Partial<Omit<TimeBank, 'id' | 'created_at'>>;
       };
+      workflow_definitions: {
+        Row: WorkflowDefinition;
+        Insert: Omit<WorkflowDefinition, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<WorkflowDefinition, 'id' | 'created_at'>>;
+      };
+      workflow_instances: {
+        Row: WorkflowInstance;
+        Insert: Omit<WorkflowInstance, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<WorkflowInstance, 'id' | 'created_at'>>;
+      };
+      workflow_approvals: {
+        Row: WorkflowApproval;
+        Insert: Omit<WorkflowApproval, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<WorkflowApproval, 'id' | 'created_at'>>;
+      };
+      workflow_delegations: {
+        Row: WorkflowDelegation;
+        Insert: Omit<WorkflowDelegation, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<WorkflowDelegation, 'id' | 'created_at'>>;
+      };
+      workflow_history: {
+        Row: WorkflowHistory;
+        Insert: Omit<WorkflowHistory, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<WorkflowHistory, 'id' | 'created_at'>>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -1006,6 +1259,9 @@ export interface Database {
       time_record_status: TimeRecordStatus;
       clock_type: ClockType;
       record_source: RecordSource;
+      workflow_type: WorkflowType;
+      workflow_status: WorkflowStatus;
+      workflow_decision: WorkflowDecision;
     };
   };
 }

@@ -1,3 +1,13 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/notifications",
+      "schedule": "0 8,18 * * *"
+    },
+    {
+      "path": "/api/cron/reports",
+      "schedule": "* * * * *"
+    }
+  ]
 }

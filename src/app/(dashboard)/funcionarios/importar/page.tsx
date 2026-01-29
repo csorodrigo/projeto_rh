@@ -1,7 +1,6 @@
-import { Upload, FileSpreadsheet, AlertTriangle } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ImportWizard } from "@/components/import"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { AlertTriangle } from "lucide-react"
 
 export default function ImportarPage() {
   return (
@@ -9,7 +8,7 @@ export default function ImportarPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Importar Funcionários</h1>
         <p className="text-muted-foreground">
-          Importe funcionários em lote através de planilha
+          Importe funcionários em lote através de planilha CSV ou Excel
         </p>
       </div>
 
@@ -17,30 +16,13 @@ export default function ImportarPage() {
         <AlertTriangle className="size-4" />
         <AlertTitle>Formato de importação</AlertTitle>
         <AlertDescription>
-          Baixe o modelo de planilha antes de fazer a importação para garantir
-          que os dados estejam no formato correto.
+          Baixe o template CSV antes de fazer a importação para garantir
+          que os dados estejam no formato correto. O arquivo deve conter os campos:
+          name, cpf, personal_email, birth_date, hire_date, position, department, base_salary, status, personal_phone.
         </AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload de Planilha</CardTitle>
-          <CardDescription>
-            Formatos aceitos: .xlsx, .xls, .csv
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Upload className="size-16 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Em desenvolvimento</h3>
-          <p className="text-muted-foreground text-center max-w-md mb-4">
-            A funcionalidade de importação em lote estará disponível em breve.
-          </p>
-          <Button disabled>
-            <FileSpreadsheet className="mr-2 size-4" />
-            Baixar Modelo
-          </Button>
-        </CardContent>
-      </Card>
+      <ImportWizard />
     </div>
   )
 }

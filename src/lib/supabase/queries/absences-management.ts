@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { AbsenceType, AbsenceStatus } from '@/types/database';
 import { QueryResult, QueryError } from '@/lib/supabase/queries';
+import { WorkflowEngine } from '@/lib/workflows/engine';
 
 export interface CreateAbsenceRequest {
   company_id: string;
@@ -171,6 +172,26 @@ export async function createAbsenceRequest(
         data: null,
         error: { message: error.message, code: error.code },
       };
+    }
+
+    // Criar workflow de aprovação
+    try {
+      const workflowEngine = new WorkflowEngine(data.company_id);
+      await workflowEngine.createWorkflowInstance('absence', {
+        entityType: 'absence',
+        entityId: absence.id,
+        requesterId: user.id,
+        metadata: {
+          days: totalDays,
+          type: data.type,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          reason: data.reason || '',
+        },
+      });
+    } catch (workflowError) {
+      console.error('Erro ao criar workflow:', workflowError);
+      // Não falhar a criação da ausência se o workflow falhar
     }
 
     return {

@@ -34,6 +34,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { SearchCommand } from "@/components/search-command"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 
 const routeLabels: Record<string, string> = {
   dashboard: "Dashboard",
@@ -53,6 +54,7 @@ interface HeaderProps {
     name: string
     email: string
     avatar?: string
+    id?: string
   }
 }
 
@@ -76,35 +78,6 @@ export function Header({
 
     return () => clearInterval(timer)
   }, [])
-
-  const [notifications] = React.useState([
-    {
-      id: 1,
-      title: "ASO vencendo",
-      description: "3 funcionarios com ASO vencendo esta semana",
-      time: "2h",
-      unread: true,
-      type: "warning" as const,
-    },
-    {
-      id: 2,
-      title: "Ferias aprovadas",
-      description: "Maria Silva teve ferias aprovadas",
-      time: "5h",
-      unread: true,
-      type: "success" as const,
-    },
-    {
-      id: 3,
-      title: "Novo funcionario",
-      description: "Joao Santos foi cadastrado",
-      time: "1d",
-      unread: false,
-      type: "info" as const,
-    },
-  ])
-
-  const unreadCount = notifications.filter((n) => n.unread).length
 
   const getBreadcrumbs = () => {
     const segments = pathname.split("/").filter(Boolean)
@@ -187,81 +160,7 @@ export function Header({
         </DropdownMenu>
 
         {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="size-4" />
-              {unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -right-1 -top-1 size-5 justify-center rounded-full p-0 text-[10px] animate-pulse"
-                >
-                  {unreadCount}
-                </Badge>
-              )}
-              <span className="sr-only">Notificacoes</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto">
-            <DropdownMenuLabel className="flex items-center justify-between sticky top-0 bg-background z-10">
-              <span>Notificações</span>
-              {unreadCount > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {unreadCount} novas
-                </Badge>
-              )}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {notifications.length > 0 ? (
-              <>
-                {notifications.map((notification) => (
-                  <DropdownMenuItem
-                    key={notification.id}
-                    className={cn(
-                      "flex flex-col items-start gap-1 p-3 cursor-pointer",
-                      notification.unread && "bg-accent/50"
-                    )}
-                  >
-                    <div className="flex w-full items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {notification.unread && (
-                          <span className="size-2 rounded-full bg-primary shrink-0" />
-                        )}
-                        <span
-                          className={cn(
-                            "font-medium text-sm",
-                            notification.unread && "text-primary"
-                          )}
-                        >
-                          {notification.title}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {notification.time}
-                      </span>
-                    </div>
-                    <span className="text-sm text-muted-foreground pl-4">
-                      {notification.description}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/notificacoes"
-                    className="justify-center text-primary cursor-pointer font-medium"
-                  >
-                    Ver todas as notificações
-                  </Link>
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                Nenhuma notificação
-              </div>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {user.id && <NotificationBell userId={user.id} />}
 
         {/* User Menu */}
         <DropdownMenu>
