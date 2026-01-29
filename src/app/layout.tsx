@@ -18,11 +18,12 @@ export const metadata: Metadata = {
   description: "Sistema de gestao de recursos humanos",
   icons: {
     icon: [
-      { url: '/icon.png', sizes: '192x192', type: 'image/png' },
-      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/icon.png',
-    shortcut: '/favicon.png',
+    apple: { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    shortcut: '/favicon.ico',
   },
 }
 
