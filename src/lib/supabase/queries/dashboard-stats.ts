@@ -15,6 +15,10 @@ export interface DashboardStatsData {
   attendanceRate: number;
 }
 
+interface EmployeeBasicData {
+  birth_date: string | null;
+}
+
 /**
  * Busca estatísticas gerais do dashboard
  */
@@ -62,7 +66,7 @@ export async function getRealDashboardStats(): Promise<DashboardStatsData> {
       .from('employees')
       .select('birth_date')
       .eq('status', 'active')
-      .not('birth_date', 'is', null);
+      .not('birth_date', 'is', null) as { data: EmployeeBasicData[] | null };
 
     // Contar aniversariantes da semana
     let birthdaysThisWeek = 0;

@@ -15,6 +15,18 @@ export interface AbsentEmployee {
   reason?: string;
 }
 
+interface AbsenceData {
+  id: string;
+  type: string;
+  reason: string | null;
+  employee_id: string;
+  employees: {
+    id: string;
+    name: string;
+    personal_email: string | null;
+  };
+}
+
 const absenceTypeLabels: Record<string, string> = {
   vacation: 'Férias',
   vacation_advance: 'Férias Antecipadas',
@@ -66,7 +78,7 @@ export async function getTodayAbsences(): Promise<AbsentEmployee[]> {
       `)
       .eq('status', 'approved')
       .lte('start_date', today)
-      .gte('end_date', today);
+      .gte('end_date', today) as { data: any[] | null; error: any };
 
     if (error) {
       console.error('Erro ao buscar ausências:', error);
@@ -141,7 +153,7 @@ export async function getUpcomingAbsences(days: number = 7): Promise<AbsentEmplo
       .eq('status', 'approved')
       .gte('start_date', todayStr)
       .lte('start_date', futureDateStr)
-      .order('start_date', { ascending: true });
+      .order('start_date', { ascending: true }) as { data: any[] | null; error: any };
 
     if (error) {
       console.error('Erro ao buscar próximas ausências:', error);

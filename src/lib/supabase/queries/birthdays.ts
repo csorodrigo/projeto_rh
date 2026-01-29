@@ -15,6 +15,13 @@ export interface Birthday {
   birth_date: string;
 }
 
+interface EmployeeData {
+  id: string;
+  name: string;
+  birth_date: string | null;
+  personal_email: string | null;
+}
+
 /**
  * Busca aniversariantes da semana atual
  * Considera domingo como início da semana
@@ -41,7 +48,7 @@ export async function getWeeklyBirthdays(): Promise<Birthday[]> {
       .from('employees')
       .select('id, name, birth_date, personal_email')
       .eq('status', 'active')
-      .not('birth_date', 'is', null);
+      .not('birth_date', 'is', null) as { data: EmployeeData[] | null; error: any };
 
     if (error) {
       console.error('Erro ao buscar aniversariantes:', error);
@@ -138,7 +145,7 @@ export async function getTodayBirthdays(): Promise<Birthday[]> {
       .from('employees')
       .select('id, name, birth_date, personal_email')
       .eq('status', 'active')
-      .not('birth_date', 'is', null);
+      .not('birth_date', 'is', null) as { data: EmployeeData[] | null; error: any };
 
     if (error) {
       console.error('Erro ao buscar aniversariantes do dia:', error);
