@@ -90,9 +90,13 @@ export class ReportExporter {
 
   /**
    * Exporta para PDF
+   * TODO: Reativar quando jsPDF for configurado corretamente para Turbopack
    */
   private async exportToPDF(result: ReportResult, config: ExportConfig): Promise<Buffer> {
-    // Dynamic import to avoid Turbopack timeout on large minified files
+    // Temporarily disabled due to Turbopack build issues
+    throw new Error('Exportação PDF temporariamente desabilitada. Use CSV ou Excel.');
+
+    /* Dynamic import disabled to fix build
     const { default: jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
 
@@ -101,7 +105,9 @@ export class ReportExporter {
       unit: 'mm',
       format: config.pageSize || 'a4',
     });
+    */
 
+    /* Rest of PDF code commented out
     // Título
     if (config.title) {
       doc.setFontSize(16);
@@ -174,6 +180,7 @@ export class ReportExporter {
     // Converter para Buffer
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
     return pdfBuffer;
+    */
   }
 
   /**
