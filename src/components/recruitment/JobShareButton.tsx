@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Share2, Link2, MessageCircle } from "lucide-react"
 import { useState } from "react"
 
@@ -17,7 +17,6 @@ interface JobShareButtonProps {
 
 export function JobShareButton({ jobId, jobTitle }: JobShareButtonProps) {
   const [open, setOpen] = useState(false)
-  const { toast } = useToast()
 
   const jobUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/vagas/${jobId}`
@@ -26,17 +25,10 @@ export function JobShareButton({ jobId, jobTitle }: JobShareButtonProps) {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(jobUrl)
-      toast({
-        title: "Link copiado!",
-        description: "O link da vaga foi copiado para a área de transferência.",
-      })
+      toast.success("Link copiado para a área de transferência!")
       setOpen(false)
     } catch (error) {
-      toast({
-        title: "Erro ao copiar",
-        description: "Não foi possível copiar o link.",
-        variant: "destructive",
-      })
+      toast.error("Não foi possível copiar o link.")
     }
   }
 

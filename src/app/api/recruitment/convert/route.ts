@@ -6,14 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { buildEmployeeFromConversion, validateEmployeeData, checkDuplicateEmployee } from '@/lib/recruitment/employee-conversion';
 import { createOnboardingChecklist } from '@/lib/recruitment/onboarding';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient();
 
     // Verificar autenticação
     const {

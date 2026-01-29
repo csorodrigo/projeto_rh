@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Loader2, Upload, CheckCircle2 } from "lucide-react"
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -64,7 +64,6 @@ interface ApplyModalProps {
 export function ApplyModal({ jobId, jobTitle, open, onOpenChange }: ApplyModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const { toast } = useToast()
 
   const form = useForm<ApplyFormValues>({
     resolver: zodResolver(applyFormSchema),
@@ -103,10 +102,7 @@ export function ApplyModal({ jobId, jobTitle, open, onOpenChange }: ApplyModalPr
       }
 
       setIsSuccess(true)
-      toast({
-        title: "Candidatura enviada!",
-        description: "Obrigado pelo seu interesse. Entraremos em contato em breve.",
-      })
+      toast.success("Candidatura enviada! Entraremos em contato em breve.")
 
       setTimeout(() => {
         onOpenChange(false)
@@ -114,11 +110,7 @@ export function ApplyModal({ jobId, jobTitle, open, onOpenChange }: ApplyModalPr
         form.reset()
       }, 3000)
     } catch (error) {
-      toast({
-        title: "Erro ao enviar candidatura",
-        description: error instanceof Error ? error.message : "Tente novamente mais tarde",
-        variant: "destructive",
-      })
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar candidatura. Tente novamente.")
     } finally {
       setIsSubmitting(false)
     }
