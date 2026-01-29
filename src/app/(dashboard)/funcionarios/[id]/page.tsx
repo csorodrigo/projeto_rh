@@ -18,6 +18,8 @@ import {
   Loader2,
   Briefcase,
   Heart,
+  Clock,
+  CalendarOff,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -34,9 +36,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { getEmployee, getCurrentProfile } from "@/lib/supabase/queries"
+import { getEmployeeTimeRecords } from "@/lib/supabase/queries/time-records"
+import {
+  getEmployeeAbsences,
+  getAbsenceTypeLabel,
+  getAbsenceStatusLabel,
+} from "@/lib/supabase/queries/employee-absences"
 import { formatCPF, formatPhone, formatCurrency, formatDate } from "@/lib/utils"
 import type { Employee } from "@/types/database"
+import type { TimeRecord } from "@/lib/supabase/queries/time-records"
+import type { EmployeeAbsence } from "@/lib/supabase/queries/employee-absences"
 import { DocumentList } from "@/components/documents/document-list"
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -66,6 +84,23 @@ const maritalStatusMap: Record<string, string> = {
   divorced: "Divorciado(a)",
   widowed: "Viuvo(a)",
   separated: "Separado(a)",
+}
+
+const recordTypeMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  clock_in: { label: "Entrada", variant: "default" },
+  clock_out: { label: "Saída", variant: "secondary" },
+  break_start: { label: "Início Intervalo", variant: "outline" },
+  break_end: { label: "Fim Intervalo", variant: "outline" },
+}
+
+const absenceStatusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "secondary",
+  pending: "outline",
+  approved: "default",
+  rejected: "destructive",
+  cancelled: "secondary",
+  in_progress: "outline",
+  completed: "secondary",
 }
 
 function InfoItem({ label, value, icon: Icon }: { label: string; value?: string | null; icon?: React.ElementType }) {
@@ -123,6 +158,8 @@ export default function EmployeeViewPage() {
   const router = useRouter()
   const [employee, setEmployee] = React.useState<Employee | null>(null)
   const [companyId, setCompanyId] = React.useState<string | null>(null)
+  const [timeRecords, setTimeRecords] = React.useState<TimeRecord[]>([])
+  const [absences, setAbsences] = React.useState<EmployeeAbsence[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -145,6 +182,17 @@ export default function EmployeeViewPage() {
 
         if (profileResult.data?.company_id) {
           setCompanyId(profileResult.data.company_id)
+        }
+
+        // Fetch time records and absences
+        if (employeeResult.data) {
+          const [timeRecordsData, absencesData] = await Promise.all([
+            getEmployeeTimeRecords(params.id, 10),
+            getEmployeeAbsences(params.id),
+          ])
+
+          setTimeRecords(timeRecordsData)
+          setAbsences(absencesData)
         }
       } catch (err) {
         setError("Erro ao carregar funcionario")
@@ -199,73 +247,56 @@ export default function EmployeeViewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/funcionarios">
-              <ArrowLeft className="size-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{employee.full_name}</h1>
-            <p className="text-muted-foreground">
-              {employee.position} • {employee.department}
-            </p>
-          </div>
-        </div>
-        <Button asChild>
-          <Link href={`/funcionarios/${employee.id}/editar`}>
-            <Edit className="mr-2 size-4" />
-            Editar
-          </Link>
-        </Button>
-      </div>
-
       {/* Employee Header Card */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row items-start gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={employee.photo_url || ""} alt={employee.full_name} />
-              <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                {employee.full_name
-                  ?.split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-4">
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-2xl font-semibold">{employee.full_name}</h2>
+          <div className="flex flex-col md:flex-row items-start justify-between gap-6">
+            <div className="flex items-center gap-6">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={employee.photo_url || ""} alt={employee.full_name} />
+                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                  {employee.full_name
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold tracking-tight">{employee.full_name}</h1>
                   <Badge variant={statusMap[employee.status]?.variant || "default"}>
                     {statusMap[employee.status]?.label || employee.status}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground">
-                  Matricula: {employee.employee_number || "-"}
+                <p className="text-lg text-muted-foreground">
+                  {employee.position} • {employee.department}
                 </p>
-              </div>
-              <div className="flex flex-wrap gap-4">
-                {employee.email && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="size-4 text-muted-foreground" />
-                    <a href={`mailto:${employee.email}`} className="hover:underline">
-                      {employee.email}
-                    </a>
-                  </div>
-                )}
-                {employee.phone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="size-4 text-muted-foreground" />
-                    <span>{formatPhone(employee.phone)}</span>
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-4">
+                  {employee.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="size-4 text-muted-foreground" />
+                      <a href={`mailto:${employee.email}`} className="hover:underline">
+                        {employee.email}
+                      </a>
+                    </div>
+                  )}
+                  {employee.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="size-4 text-muted-foreground" />
+                      <span>{formatPhone(employee.phone)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+            <Button asChild>
+              <Link href={`/funcionarios/${employee.id}/editar`}>
+                <Edit className="mr-2 size-4" />
+                Editar
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -274,11 +305,10 @@ export default function EmployeeViewPage() {
       <Tabs defaultValue="personal" className="space-y-4">
         <TabsList>
           <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
-          <TabsTrigger value="professional">Profissional</TabsTrigger>
+          <TabsTrigger value="professional">Dados Profissionais</TabsTrigger>
           <TabsTrigger value="documents">Documentos</TabsTrigger>
-          <TabsTrigger value="files">Arquivos</TabsTrigger>
-          <TabsTrigger value="bank">Bancario</TabsTrigger>
-          <TabsTrigger value="address">Endereco</TabsTrigger>
+          <TabsTrigger value="time-records">Histórico de Ponto</TabsTrigger>
+          <TabsTrigger value="absences">Ausências</TabsTrigger>
         </TabsList>
 
         {/* Personal Tab */}
@@ -301,6 +331,8 @@ export default function EmployeeViewPage() {
                   value={employee.birth_date ? formatDate(employee.birth_date) : null}
                   icon={Calendar}
                 />
+                <InfoItem label="Email" value={employee.email} icon={Mail} />
+                <InfoItem label="Telefone" value={employee.phone ? formatPhone(employee.phone) : null} icon={Phone} />
                 <InfoItem label="Genero" value={genderMap[employee.gender || ""] || employee.gender} />
                 <InfoItem
                   label="Estado Civil"
@@ -308,6 +340,27 @@ export default function EmployeeViewPage() {
                 />
                 <InfoItem label="Nacionalidade" value={employee.nationality} />
               </div>
+
+              {address && (
+                <>
+                  <Separator className="my-6" />
+                  <div>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <MapPin className="size-4" />
+                      Endereco
+                    </h3>
+                    <div className="grid gap-6 md:grid-cols-3">
+                      <InfoItem label="CEP" value={address.zip_code} />
+                      <InfoItem label="Logradouro" value={address.street} />
+                      <InfoItem label="Numero" value={address.number} />
+                      <InfoItem label="Complemento" value={address.complement} />
+                      <InfoItem label="Bairro" value={address.neighborhood} />
+                      <InfoItem label="Cidade" value={address.city} />
+                      <InfoItem label="Estado" value={address.state} />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {(employee.emergency_contact || employee.emergency_phone) && (
                 <>
@@ -361,6 +414,7 @@ export default function EmployeeViewPage() {
                   value={employee.salary ? formatCurrency(employee.salary) : null}
                 />
                 <InfoItem label="Carga Horaria Semanal" value={employee.weekly_hours ? `${employee.weekly_hours}h` : null} />
+                <InfoItem label="Status" value={statusMap[employee.status]?.label || employee.status} />
               </div>
 
               {employee.termination_date && (
@@ -379,43 +433,54 @@ export default function EmployeeViewPage() {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* Documents Tab */}
-        <TabsContent value="documents">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="size-5" />
-                Documentos Trabalhistas
-              </CardTitle>
-              <CardDescription>Documentos para registro trabalhista</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6 md:grid-cols-3">
-                <InfoItem label="PIS/PASEP" value={employee.pis} />
-                <InfoItem label="CTPS Numero" value={employee.ctps_number} />
-                <InfoItem label="CTPS Serie" value={employee.ctps_series} />
-                <InfoItem label="CTPS Estado" value={employee.ctps_state} />
-                <InfoItem label="CBO" value={employee.cbo} />
-                <InfoItem label="Categoria Profissional" value={employee.professional_category} />
+              <Separator className="my-6" />
+              <div>
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <FileText className="size-4" />
+                  Documentos Trabalhistas
+                </h3>
+                <div className="grid gap-6 md:grid-cols-3">
+                  <InfoItem label="PIS/PASEP" value={employee.pis} />
+                  <InfoItem label="CTPS Numero" value={employee.ctps_number} />
+                  <InfoItem label="CTPS Serie" value={employee.ctps_series} />
+                  <InfoItem label="CTPS Estado" value={employee.ctps_state} />
+                </div>
               </div>
 
-              {(employee.cnh_number || employee.voter_title || employee.military_certificate) && (
+              {employee.bank_name && (
                 <>
                   <Separator className="my-6" />
-                  <h3 className="font-semibold mb-4">Outros Documentos</h3>
-                  <div className="grid gap-6 md:grid-cols-3">
-                    <InfoItem label="CNH Numero" value={employee.cnh_number} />
-                    <InfoItem label="CNH Categoria" value={employee.cnh_category} />
-                    <InfoItem
-                      label="CNH Validade"
-                      value={employee.cnh_expiry ? formatDate(employee.cnh_expiry) : null}
-                    />
-                    <InfoItem label="Titulo de Eleitor" value={employee.voter_title} />
-                    <InfoItem label="Certificado Militar" value={employee.military_certificate} />
+                  <div>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <CreditCard className="size-4" />
+                      Dados Bancarios
+                    </h3>
+                    <div className="grid gap-6 md:grid-cols-3">
+                      <InfoItem label="Banco" value={employee.bank_name} />
+                      <InfoItem label="Codigo do Banco" value={employee.bank_code} />
+                      <InfoItem
+                        label="Tipo de Conta"
+                        value={
+                          employee.account_type === "checking"
+                            ? "Corrente"
+                            : employee.account_type === "savings"
+                            ? "Poupanca"
+                            : employee.account_type === "salary"
+                            ? "Salario"
+                            : employee.account_type
+                        }
+                      />
+                      <InfoItem
+                        label="Agencia"
+                        value={employee.agency ? `${employee.agency}${employee.agency_digit ? `-${employee.agency_digit}` : ""}` : null}
+                      />
+                      <InfoItem
+                        label="Conta"
+                        value={employee.account ? `${employee.account}${employee.account_digit ? `-${employee.account_digit}` : ""}` : null}
+                      />
+                      <InfoItem label="Chave PIX" value={employee.pix_key} />
+                    </div>
                   </div>
                 </>
               )}
@@ -423,82 +488,148 @@ export default function EmployeeViewPage() {
           </Card>
         </TabsContent>
 
-        {/* Files Tab */}
-        <TabsContent value="files">
+        {/* Documents Tab */}
+        <TabsContent value="documents">
           {companyId ? (
             <DocumentList employeeId={employee.id} companyId={companyId} />
           ) : (
             <Card>
-              <CardContent className="flex items-center justify-center py-10">
-                <p className="text-muted-foreground">Carregando...</p>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="size-5" />
+                  Documentos
+                </CardTitle>
+                <CardDescription>Documentos anexados do funcionario</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center py-10">
+                <FileText className="h-10 w-10 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">Nenhum documento anexado</p>
+                <Button disabled>
+                  <FileText className="mr-2 size-4" />
+                  Adicionar Documento
+                </Button>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* Bank Tab */}
-        <TabsContent value="bank">
+        {/* Time Records Tab */}
+        <TabsContent value="time-records">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="size-5" />
-                Dados Bancarios
+                <Clock className="size-5" />
+                Histórico de Ponto
               </CardTitle>
-              <CardDescription>Informacoes para pagamento de salario</CardDescription>
+              <CardDescription>Últimos 10 registros de ponto do funcionário</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6 md:grid-cols-3">
-                <InfoItem label="Banco" value={employee.bank_name} />
-                <InfoItem label="Codigo do Banco" value={employee.bank_code} />
-                <InfoItem
-                  label="Tipo de Conta"
-                  value={
-                    employee.account_type === "checking"
-                      ? "Corrente"
-                      : employee.account_type === "savings"
-                      ? "Poupanca"
-                      : employee.account_type === "salary"
-                      ? "Salario"
-                      : employee.account_type
-                  }
-                />
-                <InfoItem
-                  label="Agencia"
-                  value={employee.agency ? `${employee.agency}${employee.agency_digit ? `-${employee.agency_digit}` : ""}` : null}
-                />
-                <InfoItem
-                  label="Conta"
-                  value={employee.account ? `${employee.account}${employee.account_digit ? `-${employee.account_digit}` : ""}` : null}
-                />
-                <InfoItem label="Chave PIX" value={employee.pix_key} />
-              </div>
+              {timeRecords.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Horário</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Local</TableHead>
+                      <TableHead>Origem</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {timeRecords.map((record) => {
+                      const recordDate = new Date(record.recorded_at)
+                      return (
+                        <TableRow key={record.id}>
+                          <TableCell>
+                            {recordDate.toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {recordDate.toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={recordTypeMap[record.record_type]?.variant || "default"}>
+                              {recordTypeMap[record.record_type]?.label || record.record_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {record.location_address || "-"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {record.source === 'web' ? 'Web' :
+                             record.source === 'mobile_app' ? 'App' :
+                             record.source === 'biometric' ? 'Biométrico' :
+                             record.source === 'manual' ? 'Manual' :
+                             record.source}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10">
+                  <Clock className="h-10 w-10 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Nenhum registro de ponto</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Address Tab */}
-        <TabsContent value="address">
+        {/* Absences Tab */}
+        <TabsContent value="absences">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="size-5" />
-                Endereco
+                <CalendarOff className="size-5" />
+                Ausências
               </CardTitle>
-              <CardDescription>Endereco residencial do funcionario</CardDescription>
+              <CardDescription>Histórico de ausências, férias e licenças</CardDescription>
             </CardHeader>
             <CardContent>
-              {address ? (
-                <div className="grid gap-6 md:grid-cols-3">
-                  <InfoItem label="CEP" value={address.zip_code} />
-                  <InfoItem label="Logradouro" value={address.street} />
-                  <InfoItem label="Numero" value={address.number} />
-                  <InfoItem label="Complemento" value={address.complement} />
-                  <InfoItem label="Bairro" value={address.neighborhood} />
-                  <InfoItem label="Cidade" value={address.city} />
-                  <InfoItem label="Estado" value={address.state} />
-                </div>
+              {absences.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Dias</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Motivo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {absences.map((absence) => (
+                      <TableRow key={absence.id}>
+                        <TableCell className="font-medium">
+                          {getAbsenceTypeLabel(absence.type)}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(absence.start_date)} - {formatDate(absence.end_date)}
+                        </TableCell>
+                        <TableCell>
+                          {absence.days_count} {absence.days_count === 1 ? 'dia' : 'dias'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={absenceStatusVariantMap[absence.status] || "default"}>
+                            {getAbsenceStatusLabel(absence.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                          {absence.reason || "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
-                <p className="text-muted-foreground">Endereco nao cadastrado</p>
+                <div className="flex flex-col items-center justify-center py-10">
+                  <CalendarOff className="h-10 w-10 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Nenhuma ausência registrada</p>
+                </div>
               )}
             </CardContent>
           </Card>

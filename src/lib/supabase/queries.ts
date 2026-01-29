@@ -999,6 +999,31 @@ export async function getTimeTrackingPeriod(
 }
 
 /**
+ * Get time records for a specific date range
+ */
+export async function getEmployeeTimeRecords(
+  employeeId: string,
+  startDate: string,
+  endDate: string
+): Promise<QueryResultArray<TimeRecord>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const { data, error } = await supabase
+    .from('time_records')
+    .select('*')
+    .eq('employee_id', employeeId)
+    .gte('recorded_at', `${startDate}T00:00:00`)
+    .lte('recorded_at', `${endDate}T23:59:59`)
+    .order('recorded_at', { ascending: true });
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
  * Get time bank balance for an employee
  */
 export async function getTimeBankBalance(
@@ -3031,3 +3056,37 @@ export async function updateCompanyData(
     error: error ? { message: error.message, code: error.code } : null,
   };
 }
+
+// ====================
+// DASHBOARD CHARTS - Re-export from dashboard-charts.ts
+// ====================
+
+export {
+  getLast7DaysAttendance,
+  getCurrentMonthAbsencesByType,
+  getTopEmployeesHours,
+  getAllDashboardCharts,
+  type AttendanceData,
+  type AbsenceTypeData,
+  type HoursWorkedData,
+  type DashboardChartsData,
+} from './queries/dashboard-charts';
+
+// ====================
+// ABSENCES MANAGEMENT - Re-export from absences-management.ts
+// ====================
+
+export {
+  createAbsenceRequest,
+  getMyAbsences,
+  calculateVacationBalance,
+  countBusinessDays,
+  checkAbsenceOverlap,
+  cancelMyAbsence,
+  getAbsenceDetails,
+  getAbsenceTypeLabel,
+  getAbsenceStatusLabel,
+  type CreateAbsenceRequest,
+  type MyAbsence,
+  type VacationBalanceInfo,
+} from './queries/absences-management';

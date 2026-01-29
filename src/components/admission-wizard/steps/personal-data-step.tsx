@@ -29,9 +29,10 @@ import type { EmployeeInput } from "@/lib/validations/employee"
 
 interface PersonalDataStepProps {
   form: UseFormReturn<EmployeeInput>
+  isEditing?: boolean
 }
 
-export function PersonalDataStep({ form }: PersonalDataStepProps) {
+export function PersonalDataStep({ form, isEditing = false }: PersonalDataStepProps) {
   return (
     <Card>
       <CardHeader>
@@ -70,6 +71,9 @@ export function PersonalDataStep({ form }: PersonalDataStepProps) {
                       field.onChange(formatted)
                     }}
                     maxLength={14}
+                    readOnly={isEditing}
+                    disabled={isEditing}
+                    className={isEditing ? "bg-muted cursor-not-allowed" : ""}
                   />
                 </FormControl>
                 <FormMessage />

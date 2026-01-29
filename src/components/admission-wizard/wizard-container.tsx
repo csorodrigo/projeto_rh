@@ -18,6 +18,8 @@ interface WizardContainerProps {
   children: React.ReactNode
   canGoBack?: boolean
   canGoNext?: boolean
+  submitButtonText?: string
+  onCancel?: () => void
 }
 
 export function WizardContainer({
@@ -31,6 +33,8 @@ export function WizardContainer({
   children,
   canGoBack = true,
   canGoNext = true,
+  submitButtonText = "Salvar Funcionario",
+  onCancel,
 }: WizardContainerProps) {
   const isFirstStep = currentStep === 0
   const isLastStep = currentStep === steps.length - 1
@@ -75,16 +79,28 @@ export function WizardContainer({
 
       {/* Navigation buttons */}
       <div className="flex items-center justify-between pt-4 border-t">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleBack}
-          disabled={isFirstStep || isSubmitting}
-          className={cn(isFirstStep && "invisible")}
-        >
-          <ArrowLeft className="mr-2 size-4" />
-          Voltar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleBack}
+            disabled={isFirstStep || isSubmitting}
+            className={cn(isFirstStep && "invisible")}
+          >
+            <ArrowLeft className="mr-2 size-4" />
+            Voltar
+          </Button>
+          {onCancel && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+          )}
+        </div>
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Passo {currentStep + 1} de {steps.length}</span>
@@ -104,7 +120,7 @@ export function WizardContainer({
             ) : (
               <>
                 <Save className="mr-2 size-4" />
-                Salvar Funcionario
+                {submitButtonText}
               </>
             )}
           </Button>

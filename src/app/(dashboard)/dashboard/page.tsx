@@ -54,8 +54,12 @@ import {
   getCurrentProfile,
   getDashboardStats,
   getRecentActivity,
+  getAllDashboardCharts,
   type DashboardStats,
   type RecentActivity as RecentActivityType,
+  type AttendanceData,
+  type AbsenceTypeData,
+  type HoursWorkedData,
 } from "@/lib/supabase/queries"
 import { WidgetsContainer } from "@/components/dashboard/widgets-container"
 import { StatsContainer } from "@/components/dashboard/stats-container"
@@ -263,31 +267,8 @@ function RecentActivityList({ items }: { items: RecentActivityType[] }) {
   )
 }
 
-// Mock data for charts (will be replaced with real data from Supabase)
-const attendanceData = [
-  { day: "Seg", presentes: 42, ausentes: 3 },
-  { day: "Ter", presentes: 45, ausentes: 0 },
-  { day: "Qua", presentes: 43, ausentes: 2 },
-  { day: "Qui", presentes: 44, ausentes: 1 },
-  { day: "Sex", presentes: 41, ausentes: 4 },
-  { day: "Sab", presentes: 15, ausentes: 30 },
-  { day: "Dom", presentes: 0, ausentes: 45 },
-]
+// Mock data for upcoming events (will be replaced with real data later)
 
-const absenceTypeData = [
-  { name: "Férias", value: 15, color: "#3b82f6" },
-  { name: "Atestado", value: 8, color: "#ef4444" },
-  { name: "Falta", value: 2, color: "#f59e0b" },
-  { name: "Folga", value: 5, color: "#10b981" },
-]
-
-const hoursWorkedData = [
-  { employee: "João", esperado: 176, trabalhado: 180 },
-  { employee: "Maria", esperado: 176, trabalhado: 172 },
-  { employee: "Pedro", esperado: 176, trabalhado: 185 },
-  { employee: "Ana", esperado: 176, trabalhado: 176 },
-  { employee: "Carlos", esperado: 176, trabalhado: 168 },
-]
 
 interface UpcomingEvent {
   id: string
@@ -376,6 +357,12 @@ export default function DashboardPage() {
   })
   const [recentActivity, setRecentActivity] = React.useState<RecentActivityType[]>([])
 
+  // Estados para dados dos gráficos
+  const [attendanceData, setAttendanceData] = React.useState<AttendanceData[]>([])
+  const [absenceTypeData, setAbsenceTypeData] = React.useState<AbsenceTypeData[]>([])
+  const [hoursWorkedData, setHoursWorkedData] = React.useState<HoursWorkedData[]>([])
+  const [chartsLoading, setChartsLoading] = React.useState(true)
+
   React.useEffect(() => {
     async function loadData() {
       try {
@@ -383,12 +370,13 @@ export default function DashboardPage() {
         if (profileResult.error || !profileResult.data?.company_id) {
           toast.error("Erro ao carregar perfil")
           setIsLoading(false)
+          setChartsLoading(false)
           return
         }
 
         const companyId = profileResult.data.company_id
 
-        // Load data in parallel
+        // Load stats and activity data
         const [statsResult, activityResult] = await Promise.all([
           getDashboardStats(companyId),
           getRecentActivity(companyId),
@@ -396,10 +384,18 @@ export default function DashboardPage() {
 
         setStats(statsResult)
         setRecentActivity(activityResult)
+        setIsLoading(false)
+
+        // Load charts data separately (can take longer)
+        const chartsData = await getAllDashboardCharts(companyId)
+        setAttendanceData(chartsData.attendance)
+        setAbsenceTypeData(chartsData.absenceTypes)
+        setHoursWorkedData(chartsData.hoursWorked)
+        setChartsLoading(false)
       } catch {
         toast.error("Erro ao carregar dados do dashboard")
-      } finally {
         setIsLoading(false)
+        setChartsLoading(false)
       }
     }
 
@@ -505,50 +501,66 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                presentes: {
-                  label: "Presentes",
-                  color: "hsl(142, 76%, 36%)",
-                },
-                ausentes: {
-                  label: "Ausentes",
-                  color: "hsl(0, 84%, 60%)",
-                },
-              }}
-              className="h-[300px]"
-            >
-              <LineChart data={attendanceData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="day"
-                  className="text-xs"
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
-                />
-                <YAxis
-                  className="text-xs"
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="presentes"
-                  stroke="hsl(142, 76%, 36%)"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="ausentes"
-                  stroke="hsl(0, 84%, 60%)"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ChartContainer>
+            {chartsLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : attendanceData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[300px] text-center">
+                <Clock className="size-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">
+                  Nenhum dado de presença disponível
+                </p>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Os dados aparecerão quando houver registros de ponto
+                </p>
+              </div>
+            ) : (
+              <ChartContainer
+                config={{
+                  presentes: {
+                    label: "Presentes",
+                    color: "hsl(142, 76%, 36%)",
+                  },
+                  ausentes: {
+                    label: "Ausentes",
+                    color: "hsl(0, 84%, 60%)",
+                  },
+                }}
+                className="h-[300px]"
+              >
+                <LineChart data={attendanceData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis
+                    dataKey="day"
+                    className="text-xs"
+                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <YAxis
+                    className="text-xs"
+                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="presentes"
+                    stroke="hsl(142, 76%, 36%)"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ausentes"
+                    stroke="hsl(0, 84%, 60%)"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -559,34 +571,50 @@ export default function DashboardPage() {
             <CardDescription>Distribuição por categoria</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                value: {
-                  label: "Quantidade",
-                },
-              }}
-              className="h-[300px] !aspect-auto w-full"
-            >
-              <PieChart>
-                <Pie
-                  data={absenceTypeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {absenceTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent />} />
-              </PieChart>
-            </ChartContainer>
+            {chartsLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : absenceTypeData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[300px] text-center">
+                <Plane className="size-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">
+                  Nenhuma ausência registrada
+                </p>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Os dados aparecerão quando houver ausências aprovadas
+                </p>
+              </div>
+            ) : (
+              <ChartContainer
+                config={{
+                  value: {
+                    label: "Quantidade",
+                  },
+                }}
+                className="h-[300px] !aspect-auto w-full"
+              >
+                <PieChart>
+                  <Pie
+                    data={absenceTypeData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {absenceTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -600,44 +628,60 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer
-            config={{
-              esperado: {
-                label: "Esperado",
-                color: "hsl(var(--muted))",
-              },
-              trabalhado: {
-                label: "Trabalhado",
-                color: "hsl(221, 83%, 53%)",
-              },
-            }}
-            className="h-[300px]"
-          >
-            <BarChart data={hoursWorkedData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis
-                dataKey="employee"
-                className="text-xs"
-                tick={{ fill: "hsl(var(--muted-foreground))" }}
-              />
-              <YAxis
-                className="text-xs"
-                tick={{ fill: "hsl(var(--muted-foreground))" }}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Legend />
-              <Bar
-                dataKey="esperado"
-                fill="hsl(var(--muted))"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="trabalhado"
-                fill="hsl(221, 83%, 53%)"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ChartContainer>
+          {chartsLoading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : hoursWorkedData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[300px] text-center">
+              <Timer className="size-12 text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">
+                Nenhum dado de horas trabalhadas
+              </p>
+              <p className="text-sm text-muted-foreground/70 mt-1">
+                Os dados aparecerão quando houver resumos diários de ponto
+              </p>
+            </div>
+          ) : (
+            <ChartContainer
+              config={{
+                esperado: {
+                  label: "Esperado",
+                  color: "hsl(var(--muted))",
+                },
+                trabalhado: {
+                  label: "Trabalhado",
+                  color: "hsl(221, 83%, 53%)",
+                },
+              }}
+              className="h-[300px]"
+            >
+              <BarChart data={hoursWorkedData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="employee"
+                  className="text-xs"
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <YAxis
+                  className="text-xs"
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Legend />
+                <Bar
+                  dataKey="esperado"
+                  fill="hsl(var(--muted))"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="trabalhado"
+                  fill="hsl(221, 83%, 53%)"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          )}
         </CardContent>
       </Card>
 

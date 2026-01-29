@@ -57,6 +57,8 @@ import {
 } from "@/lib/supabase/queries/employees"
 import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table"
 import { QuickStatusBadge, type StatusKey } from "@/components/ui/status-badge"
+import { ExportButton } from "@/components/export"
+import { exportEmployeesToCSV, exportEmployeesPDF } from "@/lib/export"
 
 const statusMap: Record<string, StatusKey> = {
   active: "active",
@@ -271,6 +273,11 @@ export default function EmployeesPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <ExportButton
+            onExportCSV={() => exportEmployeesToCSV(employees)}
+            onExportPDF={() => exportEmployeesPDF(employees)}
+            disabled={employees.length === 0}
+          />
           <Button variant="outline" onClick={fetchEmployees}>
             <RefreshCw className="mr-2 size-4" />
             Atualizar
@@ -306,10 +313,12 @@ export default function EmployeesPage() {
             toolbar={
               selectedEmployees.length > 0 && (
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 size-4" />
-                    Exportar selecionados ({selectedEmployees.length})
-                  </Button>
+                  <ExportButton
+                    onExportCSV={() => exportEmployeesToCSV(selectedEmployees)}
+                    onExportPDF={() => exportEmployeesPDF(selectedEmployees)}
+                    label={`Exportar selecionados (${selectedEmployees.length})`}
+                    size="sm"
+                  />
                 </div>
               )
             }

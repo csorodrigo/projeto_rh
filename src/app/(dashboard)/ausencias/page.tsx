@@ -28,6 +28,8 @@ import {
   AbsenceFilters,
   AbsenceApprovalDialog,
 } from "@/components/absences"
+import { ExportButton } from "@/components/export"
+import { exportAbsencesToCSV, exportAbsencesPDF } from "@/lib/export"
 import {
   listAbsences,
   getAbsenceStats,
@@ -295,7 +297,25 @@ export default function AbsencesPage() {
   return (
     <div className="space-y-6">
       {/* Page Actions */}
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <ExportButton
+          onExportCSV={() => exportAbsencesToCSV(absences)}
+          onExportPDF={() => {
+            // Get current date range
+            const now = new Date()
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+            return exportAbsencesPDF(
+              absences,
+              {
+                start: filters.startDate?.toISOString() || startOfMonth.toISOString(),
+                end: filters.endDate?.toISOString() || endOfMonth.toISOString(),
+              }
+            )
+          }}
+          disabled={absences.length === 0}
+        />
         <Button asChild>
           <Link href="/ausencias/novo">
             <Plus className="mr-2 size-4" />
