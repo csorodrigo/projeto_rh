@@ -41,15 +41,24 @@ const authRoutes = ['/login', '/signup'];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  console.log('[Middleware] Processing:', pathname);
+
   // Check if route is public first (before session check)
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
+  console.log('[Middleware] Is public route:', isPublicRoute);
+
   // Allow public routes without authentication
   if (isPublicRoute) {
-    return NextResponse.next();
+    console.log('[Middleware] Allowing public route:', pathname);
+    return NextResponse.next({
+      request,
+    });
   }
+
+  console.log('[Middleware] Checking auth for:', pathname);
 
   // Update Supabase session for protected routes
   const { supabaseResponse, user } = await updateSession(request);
