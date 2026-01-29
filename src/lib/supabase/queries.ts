@@ -546,7 +546,7 @@ export async function listCompanyASOs(
       )
     `)
     .eq('company_id', companyId)
-    .order('expiration_date', { ascending: true });
+    .order('expiry_date', { ascending: true });
 
   if (filters?.examType) {
     query = query.eq('exam_type', filters.examType);
@@ -572,7 +572,7 @@ export async function listCompanyASOs(
   if (filters?.status && filteredData) {
     const today = new Date();
     filteredData = filteredData.filter((aso) => {
-      const expirationDate = new Date(aso.expiration_date);
+      const expirationDate = new Date(aso.expiry_date);
       const daysUntilExpiration = Math.ceil(
         (expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
       );
@@ -713,7 +713,7 @@ export async function getHealthStats(companyId: string): Promise<{
   // Get all ASOs
   const { data: asos } = await supabase
     .from('asos')
-    .select('expiration_date')
+    .select('expiry_date')
     .eq('company_id', companyId);
 
   // Get certificates this month
@@ -726,12 +726,12 @@ export async function getHealthStats(companyId: string): Promise<{
   const totalASOs = asos?.length || 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const expiringASOs = asos?.filter((aso: any) => {
-    const expDate = new Date(aso.expiration_date);
+    const expDate = new Date(aso.expiry_date);
     return expDate >= today && expDate <= thirtyDaysFromNow;
   }).length || 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const expiredASOs = asos?.filter((aso: any) => {
-    const expDate = new Date(aso.expiration_date);
+    const expDate = new Date(aso.expiry_date);
     return expDate < today;
   }).length || 0;
 
@@ -2760,8 +2760,8 @@ export async function getDashboardStats(companyId: string): Promise<DashboardSta
     .from('asos')
     .select('*', { count: 'exact', head: true })
     .eq('company_id', companyId)
-    .lte('expiration_date', thirtyDaysFromNow)
-    .gte('expiration_date', today);
+    .lte('expiry_date', thirtyDaysFromNow)
+    .gte('expiry_date', today);
 
   const total = totalEmployees || 0;
   const present = presentToday || 0;
@@ -2819,7 +2819,7 @@ export async function getRecentActivity(companyId: string, limit: number = 10): 
     .from('absences')
     .select(`
       id,
-      absence_type,
+      type,
       created_at,
       employees!inner(full_name)
     `)
@@ -2830,7 +2830,7 @@ export async function getRecentActivity(companyId: string, limit: number = 10): 
   if (absences) {
     for (const absence of absences) {
       const employee = absence.employees as { full_name: string };
-      const typeLabel = absence.absence_type === 'vacation' ? 'férias' : 'ausência';
+      const typeLabel = absence.type === 'vacation' ? 'férias' : 'ausência';
       activities.push({
         id: `absence-${absence.id}`,
         type: 'ausencia',
@@ -2871,19 +2871,19 @@ export async function getRecentActivity(companyId: string, limit: number = 10): 
     .from('asos')
     .select(`
       id,
-      expiration_date,
+      expiry_date,
       created_at,
       employees!inner(full_name)
     `)
     .eq('company_id', companyId)
-    .lte('expiration_date', sevenDaysFromNow)
-    .gte('expiration_date', today)
+    .lte('expiry_date', sevenDaysFromNow)
+    .gte('expiry_date', today)
     .limit(2);
 
   if (asos) {
     for (const aso of asos) {
       const employee = aso.employees as { full_name: string };
-      const daysLeft = Math.ceil((new Date(aso.expiration_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const daysLeft = Math.ceil((new Date(aso.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       activities.push({
         id: `aso-${aso.id}`,
         type: 'aso',

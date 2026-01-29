@@ -540,7 +540,7 @@ export interface ASO {
   company_id: string;
   exam_type: string;
   exam_date: string;
-  expiration_date: string;
+  expiry_date: string;
   result: string;
   doctor_name: string;
   doctor_crm: string;
