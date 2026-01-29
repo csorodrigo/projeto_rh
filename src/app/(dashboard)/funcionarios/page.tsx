@@ -49,10 +49,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getCurrentProfile, listEmployees, deleteEmployee } from "@/lib/supabase/queries"
+import { getCurrentProfile } from "@/lib/supabase/queries"
+import {
+  listEmployees,
+  deleteEmployee,
+  type Employee
+} from "@/lib/supabase/queries/employees"
 import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table"
 import { QuickStatusBadge, type StatusKey } from "@/components/ui/status-badge"
-import type { Employee } from "@/types/database"
 
 const statusMap: Record<string, StatusKey> = {
   active: "active",
@@ -81,15 +85,11 @@ export default function EmployeesPage() {
         return
       }
 
-      const result = await listEmployees(profileResult.data.company_id)
-      if (result.error) {
-        setError(result.error.message)
-        return
-      }
-
-      setEmployees(result.data || [])
+      const result = await listEmployees({ pageSize: 100 })
+      setEmployees(result.employees || [])
     } catch (err) {
       setError("Erro ao carregar funcionarios")
+      console.error(err)
     } finally {
       setIsLoading(false)
     }
@@ -111,9 +111,10 @@ export default function EmployeesPage() {
       }
 
       toast.success("Funcionario desligado com sucesso")
-      fetchEmployees()
+      await fetchEmployees()
     } catch (err) {
       toast.error("Erro ao desligar funcionario")
+      console.error(err)
     } finally {
       setIsDeleting(false)
       setEmployeeToDelete(null)
@@ -122,16 +123,19 @@ export default function EmployeesPage() {
 
   const columns: ColumnDef<Employee>[] = [
     {
-      accessorKey: "full_name",
+      accessorKey: "name",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Funcionário" />,
       cell: ({ row }) => {
         const employee = row.original
+        const seed = employee.name.replace(/\s+/g, '')
+        const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`
+
         return (
           <div className="flex items-center gap-3">
             <Avatar className="size-10">
-              <AvatarImage src={employee.photo_url || ""} alt={employee.full_name} />
+              <AvatarImage src={avatarUrl} alt={employee.name} />
               <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                {employee.full_name
+                {employee.name
                   ?.split(" ")
                   .map((n) => n[0])
                   .join("")
@@ -140,9 +144,9 @@ export default function EmployeesPage() {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="font-medium truncate">{employee.full_name}</p>
+              <p className="font-medium truncate">{employee.name}</p>
               <p className="text-sm text-muted-foreground truncate">
-                {employee.email || employee.employee_number}
+                {employee.personal_email || employee.cpf}
               </p>
             </div>
           </div>
@@ -205,8 +209,8 @@ export default function EmployeesPage() {
                   Editar
                 </Link>
               </DropdownMenuItem>
-              {employee.email && (
-                <DropdownMenuItem onClick={() => window.open(`mailto:${employee.email}`)}>
+              {employee.personal_email && (
+                <DropdownMenuItem onClick={() => window.open(`mailto:${employee.personal_email}`)}>
                   <Mail className="mr-2 size-4" />
                   Enviar Email
                 </DropdownMenuItem>
