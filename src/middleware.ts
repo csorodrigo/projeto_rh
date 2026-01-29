@@ -20,7 +20,17 @@ const protectedRoutes = [
 /**
  * Public routes that don't require authentication
  */
-const publicRoutes = ['/login', '/signup', '/auth'];
+const publicRoutes = [
+  '/login',
+  '/signup',
+  '/auth',
+  '/vagas',
+  '/sobre',
+  '/privacidade',
+  '/recrutamento',
+  '/registro',
+  '/recuperar-senha',
+];
 
 /**
  * Routes that authenticated users shouldn't access
@@ -31,7 +41,17 @@ const authRoutes = ['/login', '/signup'];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Update Supabase session
+  // Check if route is public first (before session check)
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // Allow public routes without authentication
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // Update Supabase session for protected routes
   const { supabaseResponse, user } = await updateSession(request);
 
   // Check if route is protected
@@ -67,8 +87,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - manifest.json (PWA manifest)
+     * - sw.js (service worker)
      * - public folder assets
      */
-    "/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon\\.ico|manifest\\.json|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 }
