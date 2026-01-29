@@ -1,7 +1,11 @@
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { Header } from "@/components/layout/header"
-import { SupportChatWidget } from "@/components/support/chat-widget"
+import { ChatbotWidget } from "@/components/ai/ChatbotWidget"
+import { PWAInitializer } from "@/components/pwa/PWAInitializer"
+import { InstallPrompt } from "@/components/pwa/InstallPrompt"
+import { OfflineIndicator } from "@/components/pwa/OfflineIndicator"
+import { BottomNav } from "@/components/pwa/BottomNav"
 
 export default function DashboardLayout({
   children,
@@ -20,6 +24,8 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <PWAInitializer />
+      <OfflineIndicator />
       <AppSidebar user={user} company={company} />
       <SidebarInset>
         <Header user={user} />
@@ -27,7 +33,9 @@ export default function DashboardLayout({
           {children}
         </main>
       </SidebarInset>
-      <SupportChatWidget />
+      <ChatbotWidget />
+      <InstallPrompt />
+      <BottomNav />
     </SidebarProvider>
   )
 }

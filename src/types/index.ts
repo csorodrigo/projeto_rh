@@ -101,3 +101,69 @@ export type {
   AddActivityFormData,
   ScheduleInterviewFormData,
 } from './recruitment';
+
+// Organogram types
+export type {
+  OrgNode,
+  OrgPosition,
+  OrgConnection,
+  OrgLayout,
+  LayoutType,
+  OrgChartFilters,
+  OrgChartSettings,
+  HierarchyChange,
+  OrgExportOptions,
+  OrgFlowNode,
+  OrgFlowEdge,
+  OrgStatistics,
+  ValidationResult,
+} from './organogram';
+
+// AI types
+export type {
+  // Chat types
+  ChatMessage,
+  ChatSession,
+  QuickReply,
+  // Intent types
+  IntentType,
+  Intent,
+  // Knowledge base types
+  KnowledgeEntry,
+  CompanyPolicy,
+  // Pattern detection types
+  PatternType,
+  Pattern,
+  PatternDetectionResult,
+  // Turnover prediction types
+  TurnoverFactor,
+  TurnoverPrediction,
+  // Insight types
+  InsightType,
+  InsightSeverity,
+  Insight,
+  // Automation types
+  TriggerType,
+  AutomationTrigger,
+  AutomationCondition,
+  ActionType,
+  AutomationAction,
+  AutomationRule,
+  AutomationExecution,
+  // Suggestion types
+  SuggestionCategory,
+  SmartSuggestion,
+  // Training types
+  TrainingDocument,
+  ChatFeedback,
+  // Analytics types
+  ChatbotAnalytics,
+  AutomationAnalytics,
+  // API types
+  ChatRequest,
+  ChatResponse,
+  SuggestionsRequest,
+  SuggestionsResponse,
+  // Config types
+  AIConfig,
+} from './ai';

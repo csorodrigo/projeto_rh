@@ -12,10 +12,24 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Sistema RH",
+    default: "Sistema RH - Sesame",
     template: "%s | Sistema RH",
   },
-  description: "Sistema de gestao de recursos humanos",
+  description: "Sistema de gestão de recursos humanos - Ponto, Ausências e Folha de Pagamento",
+  manifest: "/manifest.json",
+  themeColor: "#3b82f6",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "RH Sesame",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover",
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '32x32' },
@@ -34,6 +48,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#3b82f6" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="RH Sesame" />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>
           {children}

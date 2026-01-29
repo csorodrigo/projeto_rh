@@ -150,6 +150,17 @@ const navigationItems: NavigationItem[] = [
     icon: BarChart3,
     iconColor: "text-indigo-600",
   },
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: TrendingUp,
+    iconColor: "text-cyan-600",
+    items: [
+      { title: "Dashboard", url: "/analytics" },
+      { title: "Executivo", url: "/analytics/executivo" },
+      { title: "Departamentos", url: "/analytics/departamentos" },
+    ],
+  },
 ]
 
 const settingsItems = [

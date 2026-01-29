@@ -1,0 +1,57 @@
+{
+  "name": "Sistema RH - Sesame",
+  "short_name": "RH Sesame",
+  "description": "Gestão de Recursos Humanos - Ponto, Ausências e Folha de Pagamento",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bater Ponto",
+      "short_name": "Ponto",
+      "description": "Registrar entrada ou saída",
+      "url": "/ponto/mobile",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Solicitar Ausência",
+      "short_name": "Ausência",
+      "description": "Nova solicitação de ausência",
+      "url": "/ausencias/mobile",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Holerites",
+      "short_name": "Folha",
+      "description": "Ver holerites",
+      "url": "/folha/mobile",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "pt-BR",
+  "dir": "ltr"
+}
