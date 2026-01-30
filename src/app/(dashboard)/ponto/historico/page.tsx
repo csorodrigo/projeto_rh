@@ -329,16 +329,13 @@ export default function HistoricoPage() {
         <div className="flex gap-2">
           <ExportButton
             onExportCSV={() => exportTimeRecordsToCSV(records, employeeName)}
-            onExportPDF={() =>
-              exportTimeRecordsPDF(
-                { name: employeeName },
-                records,
-                {
-                  start: dateRange.from.toISOString(),
-                  end: dateRange.to.toISOString(),
-                }
-              )
-            }
+            onExportPDF={async () => {
+              const dateRangeStr = `${dateRange.from.toLocaleDateString('pt-BR')} - ${dateRange.to.toLocaleDateString('pt-BR')}`
+              await exportTimeRecordsPDF(records, {
+                title: `Histórico de Ponto - ${employeeName}`,
+                subtitle: dateRangeStr,
+              })
+            }}
             disabled={records.length === 0}
           />
         </div>

@@ -5,13 +5,23 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
 import { cn } from "@/lib/utils"
 
-function Avatar({
-  className,
-  size = "default",
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root> & {
+export interface AvatarProps
+  extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   size?: "default" | "sm" | "lg"
-}) {
+  children?: React.ReactNode
+}
+
+export interface AvatarImageProps
+  extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image> {
+  src?: string
+}
+
+export interface AvatarFallbackProps
+  extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback> {
+  children?: React.ReactNode
+}
+
+function Avatar({ className, size = "default", children, ...props }: AvatarProps) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
@@ -21,27 +31,24 @@ function Avatar({
         className
       )}
       {...props}
-    />
+    >
+      {children}
+    </AvatarPrimitive.Root>
   )
 }
 
-function AvatarImage({
-  className,
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+function AvatarImage({ className, src, ...props }: AvatarImageProps) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
+      src={src}
       className={cn("aspect-square size-full", className)}
       {...props}
     />
   )
 }
 
-function AvatarFallback({
-  className,
-  ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
+function AvatarFallback({ className, children, ...props }: AvatarFallbackProps) {
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
@@ -50,7 +57,9 @@ function AvatarFallback({
         className
       )}
       {...props}
-    />
+    >
+      {children}
+    </AvatarPrimitive.Fallback>
   )
 }
 

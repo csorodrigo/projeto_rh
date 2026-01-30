@@ -275,7 +275,7 @@ export default function EmployeesPage() {
         <div className="flex gap-2">
           <ExportButton
             onExportCSV={() => exportEmployeesToCSV(employees)}
-            onExportPDF={() => exportEmployeesPDF(employees)}
+            onExportPDF={async () => { await exportEmployeesPDF(employees) }}
             disabled={employees.length === 0}
           />
           <Button variant="outline" onClick={fetchEmployees}>
@@ -315,7 +315,7 @@ export default function EmployeesPage() {
                 <div className="flex gap-2">
                   <ExportButton
                     onExportCSV={() => exportEmployeesToCSV(selectedEmployees)}
-                    onExportPDF={() => exportEmployeesPDF(selectedEmployees)}
+                    onExportPDF={async () => { await exportEmployeesPDF(selectedEmployees) }}
                     label={`Exportar selecionados (${selectedEmployees.length})`}
                     size="sm"
                   />
@@ -333,7 +333,7 @@ export default function EmployeesPage() {
             <AlertDialogTitle>Confirmar Desligamento</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja desligar o funcionário{" "}
-              <strong>{employeeToDelete?.full_name}</strong>? Esta ação irá alterar
+              <strong>{employeeToDelete?.name}</strong>? Esta ação irá alterar
               o status para &quot;Desligado&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>

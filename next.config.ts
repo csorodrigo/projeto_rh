@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   turbopack: {},
 
   // External packages for server components to avoid bundling issues
-  serverComponentsExternalPackages: ['jspdf', 'jspdf-autotable'],
+  serverExternalPackages: ['jspdf', 'jspdf-autotable'],
 
   // Temporarily skip TypeScript checking during build
   // to isolate the error

@@ -13,7 +13,12 @@ export type EmploymentType = 'clt' | 'pj' | 'intern' | 'temporary' | 'apprentice
 
 export type LocationType = 'on_site' | 'remote' | 'hybrid';
 
-export type CandidateSource = 'portal' | 'linkedin' | 'referral' | 'agency' | 'direct' | 'other';
+export type CandidateSource = 'portal' | 'linkedin' | 'referral' | 'agency' | 'direct' | 'other' | 'careers_page';
+
+// Alias for backwards compatibility
+export type ApplicationSource = CandidateSource;
+
+export type CandidateRating = 1 | 2 | 3 | 4 | 5;
 
 export type ApplicationStatus = 'active' | 'rejected' | 'hired' | 'withdrawn';
 
@@ -142,6 +147,7 @@ export interface Candidate {
   // Curriculo e documentos
   resume_url: string | null;
   resume_text: string | null;
+  resume_filename: string | null;
   portfolio_url: string | null;
 
   // Origem
@@ -154,6 +160,10 @@ export interface Candidate {
   expected_salary: number | null;
   available_from: string | null;
   location: string | null;
+  years_of_experience: number | null;
+
+  // Avaliacao
+  rating: CandidateRating | null;
 
   // Tags e classificacao
   tags: string[];
@@ -547,4 +557,19 @@ export interface CandidateSearchResult {
   current_position: string | null;
   resume_text: string | null;
   rank: number;
+}
+
+/**
+ * Candidatura com dados da vaga
+ */
+export interface ApplicationWithJob extends Application {
+  job: Job;
+}
+
+/**
+ * Atividade com dados do usuario
+ */
+export interface ActivityWithUser extends ApplicationActivity {
+  user_name: string;
+  user_avatar: string | null;
 }

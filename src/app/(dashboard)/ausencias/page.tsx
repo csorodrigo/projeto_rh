@@ -300,19 +300,16 @@ export default function AbsencesPage() {
       <div className="flex items-center justify-end gap-2">
         <ExportButton
           onExportCSV={() => exportAbsencesToCSV(absences)}
-          onExportPDF={() => {
-            // Get current date range
+          onExportPDF={async () => {
             const now = new Date()
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+            const startDate = filters.startDate || new Date(now.getFullYear(), now.getMonth(), 1)
+            const endDate = filters.endDate || new Date(now.getFullYear(), now.getMonth() + 1, 0)
+            const dateRange = `${startDate.toLocaleDateString('pt-BR')} - ${endDate.toLocaleDateString('pt-BR')}`
 
-            return exportAbsencesPDF(
-              absences,
-              {
-                start: filters.startDate?.toISOString() || startOfMonth.toISOString(),
-                end: filters.endDate?.toISOString() || endOfMonth.toISOString(),
-              }
-            )
+            await exportAbsencesPDF(absences, {
+              title: 'Relatório de Ausências',
+              subtitle: dateRange,
+            })
           }}
           disabled={absences.length === 0}
         />
