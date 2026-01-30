@@ -90,7 +90,11 @@ export async function listEmployees(
     const count = result.count;
 
     if (error) {
-      console.error('Erro ao listar funcionários:', error);
+      console.error('[Employees Query] Erro ao listar funcionários:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+      });
       return {
         employees: [],
         total: 0,
@@ -111,7 +115,7 @@ export async function listEmployees(
       totalPages,
     };
   } catch (error) {
-    console.error('Erro ao listar funcionários:', error);
+    console.error('[Employees Query] Erro inesperado ao listar funcionários:', error);
     return {
       employees: [],
       total: 0,
@@ -139,13 +143,17 @@ export async function getEmployeeById(id: string): Promise<Employee | null> {
     const error = result.error;
 
     if (error) {
-      console.error('Erro ao buscar funcionário:', error);
+      console.error('[Employees Query] Erro ao buscar funcionário por ID:', {
+        id,
+        message: error.message,
+        code: error.code,
+      });
       return null;
     }
 
     return employee;
   } catch (error) {
-    console.error('Erro ao buscar funcionário:', error);
+    console.error('[Employees Query] Erro inesperado ao buscar funcionário:', error);
     return null;
   }
 }
@@ -169,13 +177,17 @@ export async function createEmployee(
     const error = result.error;
 
     if (error) {
-      console.error('Erro ao criar funcionário:', error);
+      console.error('[Employees Query] Erro ao criar funcionário:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+      });
       return { employee: null, error: error.message };
     }
 
     return { employee, error: null };
   } catch (error) {
-    console.error('Erro ao criar funcionário:', error);
+    console.error('[Employees Query] Erro inesperado ao criar funcionário:', error);
     return {
       employee: null,
       error: error instanceof Error ? error.message : 'Erro desconhecido',
@@ -204,13 +216,18 @@ export async function updateEmployee(
     const error = result.error;
 
     if (error) {
-      console.error('Erro ao atualizar funcionário:', error);
+      console.error('[Employees Query] Erro ao atualizar funcionário:', {
+        id,
+        message: error.message,
+        code: error.code,
+        details: error.details,
+      });
       return { employee: null, error: error.message };
     }
 
     return { employee, error: null };
   } catch (error) {
-    console.error('Erro ao atualizar funcionário:', error);
+    console.error('[Employees Query] Erro inesperado ao atualizar funcionário:', error);
     return {
       employee: null,
       error: error instanceof Error ? error.message : 'Erro desconhecido',
@@ -235,13 +252,17 @@ export async function deleteEmployee(
     const error = result.error;
 
     if (error) {
-      console.error('Erro ao deletar funcionário:', error);
+      console.error('[Employees Query] Erro ao deletar funcionário:', {
+        id,
+        message: error.message,
+        code: error.code,
+      });
       return { success: false, error: error.message };
     }
 
     return { success: true, error: null };
   } catch (error) {
-    console.error('Erro ao deletar funcionário:', error);
+    console.error('[Employees Query] Erro inesperado ao deletar funcionário:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Erro desconhecido',
@@ -274,7 +295,7 @@ export async function listDepartments(): Promise<string[]> {
 
     return departments.sort();
   } catch (error) {
-    console.error('Erro ao listar departamentos:', error);
+    console.error('[Employees Query] Erro inesperado ao listar departamentos:', error);
     return [];
   }
 }
@@ -306,7 +327,7 @@ export async function countEmployeesByStatus(): Promise<
 
     return counts;
   } catch (error) {
-    console.error('Erro ao contar funcionários por status:', error);
+    console.error('[Employees Query] Erro inesperado ao contar funcionários por status:', error);
     return {};
   }
 }

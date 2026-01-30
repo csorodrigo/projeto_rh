@@ -262,33 +262,49 @@ function InsightCard({ insight }: { insight: any }) {
  * Data Fetching Functions (Mock)
  */
 async function fetchSuggestions() {
-  // TODO: Replace with actual API call
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/suggestions?context=dashboard`,
-    { cache: 'no-store' }
-  )
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/suggestions?context=dashboard`,
+      {
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      }
+    )
 
-  if (!response.ok) {
+    if (!response.ok) {
+      console.error('Failed to fetch suggestions:', response.status)
+      return []
+    }
+
+    const data = await response.json()
+    return data.suggestions || []
+  } catch (error) {
+    console.error('Error fetching suggestions:', error)
     return []
   }
-
-  const data = await response.json()
-  return data.suggestions || []
 }
 
 async function fetchInsights() {
-  // TODO: Replace with actual API call
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/suggestions?context=dashboard`,
-    { cache: 'no-store' }
-  )
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/suggestions?context=dashboard`,
+      {
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      }
+    )
 
-  if (!response.ok) {
+    if (!response.ok) {
+      console.error('Failed to fetch insights:', response.status)
+      return []
+    }
+
+    const data = await response.json()
+    return data.insights || []
+  } catch (error) {
+    console.error('Error fetching insights:', error)
     return []
   }
-
-  const data = await response.json()
-  return data.insights || []
 }
 
 async function fetchAIAnalytics() {
