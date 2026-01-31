@@ -50,11 +50,11 @@ export async function POST(request: NextRequest) {
 
     // Get job details and company_id
     const { data: job, error: jobError } = await supabase
-      .from("job_postings")
+      .from("jobs")
       .select("id, company_id, title, hiring_manager_id")
       .eq("id", jobId)
-      .eq("is_public", true)
-      .eq("status", "active")
+      .eq("publish_externally", true)
+      .eq("status", "open")
       .single()
 
     if (jobError || !job) {
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
           name: full_name,
           phone,
           linkedin_url,
-          source: "careers_page",
+          source: "portal",
         })
         .select("id")
         .single()
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     // Get first pipeline stage
     const { data: firstStage } = await supabase
-      .from("recruitment_stages")
+      .from("pipeline_stages")
       .select("id, name")
       .eq("company_id", job.company_id)
       .order("order_index", { ascending: true })
@@ -163,11 +163,9 @@ export async function POST(request: NextRequest) {
       .insert({
         job_id: jobId,
         candidate_id: candidateId,
-        company_id: job.company_id,
-        status: "applied",
-        current_stage_id: firstStage?.id || null,
-        source: "careers_page",
-        custom_questions: cover_letter ? { cover_letter } : null,
+        stage_id: firstStage?.id,
+        status: "active",
+        cover_letter: cover_letter || null,
       })
       .select("id")
       .single()

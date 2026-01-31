@@ -9,16 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
+const ALL_VALUE = "__all__"
+
 export function PublicJobFilters() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [department, setDepartment] = useState(searchParams.get('department') || '')
-  const [location, setLocation] = useState(searchParams.get('location') || '')
-  const [jobType, setJobType] = useState(searchParams.get('job_type') || '')
-  const [locationType, setLocationType] = useState(searchParams.get('location_type') || '')
+  const [department, setDepartment] = useState(searchParams.get('department') || ALL_VALUE)
+  const [location, setLocation] = useState(searchParams.get('location') || ALL_VALUE)
+  const [jobType, setJobType] = useState(searchParams.get('job_type') || ALL_VALUE)
+  const [locationType, setLocationType] = useState(searchParams.get('location_type') || ALL_VALUE)
 
   const [departments, setDepartments] = useState<string[]>([])
   const [locations, setLocations] = useState<string[]>([])
@@ -29,10 +31,10 @@ export function PublicJobFilters() {
     async function fetchFilterOptions() {
       // Fetch unique departments
       const { data: deptData } = await supabase
-        .from('job_postings')
+        .from('jobs')
         .select('department')
-        .eq('is_public', true)
-        .eq('status', 'active')
+        .eq('publish_externally', true)
+        .eq('status', 'open')
         .not('department', 'is', null)
 
       if (deptData) {
@@ -42,10 +44,10 @@ export function PublicJobFilters() {
 
       // Fetch unique locations
       const { data: locData } = await supabase
-        .from('job_postings')
+        .from('jobs')
         .select('location')
-        .eq('is_public', true)
-        .eq('status', 'active')
+        .eq('publish_externally', true)
+        .eq('status', 'open')
         .not('location', 'is', null)
 
       if (locData) {
@@ -61,24 +63,28 @@ export function PublicJobFilters() {
     const params = new URLSearchParams()
 
     if (search) params.set('search', search)
-    if (department) params.set('department', department)
-    if (location) params.set('location', location)
-    if (jobType) params.set('job_type', jobType)
-    if (locationType) params.set('location_type', locationType)
+    if (department && department !== ALL_VALUE) params.set('department', department)
+    if (location && location !== ALL_VALUE) params.set('location', location)
+    if (jobType && jobType !== ALL_VALUE) params.set('job_type', jobType)
+    if (locationType && locationType !== ALL_VALUE) params.set('location_type', locationType)
 
     router.push(`${pathname}?${params.toString()}`)
   }
 
   const clearFilters = () => {
     setSearch('')
-    setDepartment('')
-    setLocation('')
-    setJobType('')
-    setLocationType('')
+    setDepartment(ALL_VALUE)
+    setLocation(ALL_VALUE)
+    setJobType(ALL_VALUE)
+    setLocationType(ALL_VALUE)
     router.push(pathname)
   }
 
-  const hasActiveFilters = search || department || location || jobType || locationType
+  const hasActiveFilters = search ||
+    (department && department !== ALL_VALUE) ||
+    (location && location !== ALL_VALUE) ||
+    (jobType && jobType !== ALL_VALUE) ||
+    (locationType && locationType !== ALL_VALUE)
 
   return (
     <div className="bg-card border rounded-lg p-6 space-y-6">
@@ -121,7 +127,7 @@ export function PublicJobFilters() {
             <SelectValue placeholder="Todos" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value={ALL_VALUE}>Todos</SelectItem>
             {departments.map((dept) => (
               <SelectItem key={dept} value={dept}>
                 {dept}
@@ -139,7 +145,7 @@ export function PublicJobFilters() {
             <SelectValue placeholder="Todas" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas</SelectItem>
+            <SelectItem value={ALL_VALUE}>Todas</SelectItem>
             {locations.map((loc) => (
               <SelectItem key={loc} value={loc}>
                 {loc}
@@ -157,12 +163,12 @@ export function PublicJobFilters() {
             <SelectValue placeholder="Todos" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
-            <SelectItem value="full_time">Tempo Integral</SelectItem>
-            <SelectItem value="part_time">Meio Período</SelectItem>
-            <SelectItem value="contract">Contrato</SelectItem>
+            <SelectItem value={ALL_VALUE}>Todos</SelectItem>
+            <SelectItem value="clt">CLT</SelectItem>
+            <SelectItem value="pj">PJ</SelectItem>
+            <SelectItem value="intern">Estágio</SelectItem>
             <SelectItem value="temporary">Temporário</SelectItem>
-            <SelectItem value="internship">Estágio</SelectItem>
+            <SelectItem value="apprentice">Jovem Aprendiz</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -175,7 +181,7 @@ export function PublicJobFilters() {
             <SelectValue placeholder="Todas" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas</SelectItem>
+            <SelectItem value={ALL_VALUE}>Todas</SelectItem>
             <SelectItem value="on_site">Presencial</SelectItem>
             <SelectItem value="remote">Remoto</SelectItem>
             <SelectItem value="hybrid">Híbrido</SelectItem>

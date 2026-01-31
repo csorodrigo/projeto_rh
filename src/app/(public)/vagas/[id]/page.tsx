@@ -19,11 +19,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const supabase = await createClient()
 
     const { data: job } = await supabase
-      .from('job_postings')
+      .from('jobs')
       .select('title, description, department, location')
       .eq('id', params.id)
-      .eq('is_public', true)
-      .eq('status', 'active')
+      .eq('publish_externally', true)
+      .eq('status', 'open')
       .single()
 
     if (!job) {
@@ -56,11 +56,11 @@ export default async function JobDetailsPage({ params }: PageProps) {
     const supabase = await createClient()
 
     const { data: job, error } = await supabase
-      .from('job_postings')
+      .from('jobs')
       .select('*')
       .eq('id', params.id)
-      .eq('is_public', true)
-      .eq('status', 'active')
+      .eq('publish_externally', true)
+      .eq('status', 'open')
       .single()
 
     if (error || !job) {

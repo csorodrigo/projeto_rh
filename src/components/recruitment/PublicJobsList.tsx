@@ -26,11 +26,10 @@ export function PublicJobsList({ filters = {} }: PublicJobsListProps) {
       setLoading(true)
 
       let query = supabase
-        .from('job_postings')
+        .from('jobs')
         .select('*')
-        .eq('is_public', true)
-        .eq('status', 'active')
-        .order('featured', { ascending: false })
+        .eq('publish_externally', true)
+        .eq('status', 'open')
         .order('published_at', { ascending: false })
 
       // Apply filters
@@ -47,7 +46,7 @@ export function PublicJobsList({ filters = {} }: PublicJobsListProps) {
       }
 
       if (filters.job_type) {
-        query = query.eq('job_type', filters.job_type)
+        query = query.eq('employment_type', filters.job_type)
       }
 
       if (filters.location_type) {
