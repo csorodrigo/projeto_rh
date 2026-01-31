@@ -116,11 +116,6 @@ export default function JobPipelinePage() {
               ) : (
                 <>
                   <h1 className="text-3xl font-bold">{job?.title || 'Carregando...'}</h1>
-                  {job?.code && (
-                    <Badge variant="secondary" className="text-sm">
-                      {job.code}
-                    </Badge>
-                  )}
                   {job?.status && (
                     <Badge
                       variant={job.status === 'open' ? 'default' : 'secondary'}
@@ -173,7 +168,7 @@ export default function JobPipelinePage() {
                 <div>
                   <span className="text-muted-foreground">Vagas:</span>
                   <span className="ml-2 font-medium">
-                    {job.positions_filled}/{job.positions_available}
+                    {job.openings_count}
                   </span>
                 </div>
               </div>

@@ -105,13 +105,15 @@ export default function ApprovalsPage() {
         .eq('id', user.id)
         .single();
 
-      if (!profile?.company_id) {
+      const profileCompanyId = (profile as { company_id?: string } | null)?.company_id;
+
+      if (!profileCompanyId) {
         toast.error('Perfil não encontrado');
         return;
       }
 
       setCurrentUserId(user.id);
-      setCompanyId(profile.company_id);
+      setCompanyId(profileCompanyId);
 
       // Carregar aprovações e estatísticas
       const [pending, approved, rejected, overdue, statsData] = await Promise.all([
@@ -132,7 +134,7 @@ export default function ApprovalsPage() {
       const { data: users } = await supabase
         .from('profiles')
         .select('*')
-        .eq('company_id', profile.company_id)
+        .eq('company_id', profileCompanyId)
         .neq('id', user.id);
 
       setEligibleUsers((users as Profile[]) || []);

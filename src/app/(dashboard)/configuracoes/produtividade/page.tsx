@@ -116,7 +116,7 @@ export default function ProductivitySettingsPage() {
       .order('nome')
 
     return (
-      data?.map(d => ({
+      (data as Array<{ id: string; nome: string }> | null)?.map(d => ({
         id: d.id,
         name: d.nome,
       })) || []

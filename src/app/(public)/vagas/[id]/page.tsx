@@ -16,7 +16,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const { data: job } = await supabase
       .from('job_postings')
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function JobDetailsPage({ params }: PageProps) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const { data: job, error } = await supabase
       .from('job_postings')

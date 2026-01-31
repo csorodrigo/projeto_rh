@@ -58,7 +58,7 @@ const newEmployeeSchema = z.object({
     return num > 0
   }, "Salário deve ser maior que zero"),
   status: z.enum(["active", "inactive", "on_leave"], {
-    required_error: "Status é obrigatório",
+    message: "Status é obrigatório",
   }),
 
   // Endereço (opcional)
@@ -142,14 +142,16 @@ export default function NewEmployeePage() {
         .eq("id", user.id)
         .single()
 
-      if (!profile?.company_id) {
+      const profileCompanyId = (profile as { company_id?: string } | null)?.company_id
+
+      if (!profileCompanyId) {
         toast.error("Erro ao identificar empresa")
         return
       }
 
       // Preparar dados do funcionário
       const employeeData = {
-        company_id: profile.company_id,
+        company_id: profileCompanyId,
         name: data.name,
         cpf: data.cpf.replace(/\D/g, ""),
         personal_email: data.personal_email,

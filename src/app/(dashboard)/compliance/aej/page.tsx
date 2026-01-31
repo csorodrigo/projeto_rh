@@ -74,24 +74,13 @@ export default function AEJPage() {
 
       if (!validation.valid) {
         setValidationErrors(validation.errors)
-        toast({
-          title: 'Validação Falhou',
-          description: `${validation.errors.length} erro(s) encontrado(s)`,
-          variant: 'destructive',
-        })
+        toast.error(`Validação Falhou: ${validation.errors.length} erro(s) encontrado(s)`)
       } else {
-        toast({
-          title: 'Validação OK',
-          description: 'Empresa está pronta para gerar AEJ',
-        })
+        toast.success('Validação OK: Empresa está pronta para gerar AEJ')
       }
     } catch (error) {
       console.error('Erro ao validar:', error)
-      toast({
-        title: 'Erro',
-        description: 'Erro ao validar dados da empresa',
-        variant: 'destructive',
-      })
+      toast.error('Erro ao validar dados da empresa')
     } finally {
       setValidating(false)
     }
@@ -113,11 +102,7 @@ export default function AEJPage() {
       const validation = await validateCompanyForAEJ(companyId)
       if (!validation.valid) {
         setValidationErrors(validation.errors)
-        toast({
-          title: 'Validação Falhou',
-          description: 'Corrija os erros antes de gerar o AEJ',
-          variant: 'destructive',
-        })
+        toast.error('Validação Falhou: Corrija os erros antes de gerar o AEJ')
         return
       }
 
@@ -176,17 +161,10 @@ export default function AEJPage() {
 
       setResult(generatedResult)
 
-      toast({
-        title: 'AEJ Gerado',
-        description: `${generatedResult.totalEmployees} funcionário(s) processado(s)`,
-      })
+      toast.success(`AEJ Gerado: ${generatedResult.totalEmployees} funcionário(s) processado(s)`)
     } catch (error) {
       console.error('Erro ao gerar AEJ:', error)
-      toast({
-        title: 'Erro',
-        description: error instanceof Error ? error.message : 'Erro ao gerar AEJ',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Erro ao gerar AEJ')
     } finally {
       setLoading(false)
     }
@@ -208,10 +186,7 @@ export default function AEJPage() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    toast({
-      title: 'Download Iniciado',
-      description: result.filename,
-    })
+    toast.success(`Download Iniciado: ${result.filename}`)
   }
 
   /**

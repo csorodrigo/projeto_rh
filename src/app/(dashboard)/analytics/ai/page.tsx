@@ -21,6 +21,14 @@ export const metadata: Metadata = {
   description: 'Insights e sugestões inteligentes geradas por IA',
 }
 
+interface AIInsight {
+  id: string
+  title: string
+  description: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  suggestions?: string[]
+}
+
 export default async function AIAnalyticsPage() {
   // TODO: Fetch real data from API
   const suggestions = await fetchSuggestions()
@@ -159,7 +167,7 @@ export default async function AIAnalyticsPage() {
             <CardContent>
               {insights.length > 0 ? (
                 <div className="space-y-4">
-                  {insights.map((insight) => (
+                  {insights.map((insight: AIInsight) => (
                     <InsightCard key={insight.id} insight={insight} />
                   ))}
                 </div>
@@ -213,7 +221,7 @@ export default async function AIAnalyticsPage() {
 /**
  * Insight Card Component
  */
-function InsightCard({ insight }: { insight: any }) {
+function InsightCard({ insight }: { insight: AIInsight }) {
   const severityColors = {
     low: 'text-blue-600 bg-blue-50',
     medium: 'text-orange-600 bg-orange-50',

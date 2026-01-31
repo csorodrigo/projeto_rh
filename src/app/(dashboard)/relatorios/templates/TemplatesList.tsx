@@ -40,10 +40,12 @@ export function TemplatesList({ filter }: TemplatesListProps) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('company_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
-      if (!profile?.company_id) {
+      const companyId = (profile as { company_id?: string } | null)?.company_id;
+
+      if (!companyId) {
         setError('Empresa não encontrada');
         return;
       }
@@ -52,15 +54,15 @@ export function TemplatesList({ filter }: TemplatesListProps) {
 
       switch (filter) {
         case 'all':
-          data = await listTemplates({ company_id: profile.company_id });
+          data = await listTemplates({ company_id: companyId });
           break;
 
         case 'favorites':
-          data = await getFavoriteTemplates(user.id, profile.company_id);
+          data = await getFavoriteTemplates(user.id, companyId);
           break;
 
         case 'mine':
-          data = await getMyTemplates(user.id, profile.company_id);
+          data = await getMyTemplates(user.id, companyId);
           break;
 
         case 'shared':
@@ -68,7 +70,7 @@ export function TemplatesList({ filter }: TemplatesListProps) {
           break;
 
         case 'scheduled':
-          const all = await listTemplates({ company_id: profile.company_id });
+          const all = await listTemplates({ company_id: companyId });
           data = all.filter(t => t.schedule?.active);
           break;
       }

@@ -573,3 +573,39 @@ export interface ActivityWithUser extends ApplicationActivity {
   user_name: string;
   user_avatar: string | null;
 }
+
+/**
+ * Candidato no Kanban (visualização simplificada)
+ */
+export interface KanbanCandidate {
+  id: string;
+  application_id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  current_stage: string;
+  rating: number | null;
+  tags: string[];
+  applied_at: string;
+  job_id: string;
+  job_title: string;
+  avatar_url: string | null;
+  resume_url: string | null;
+  linkedin_url: string | null;
+  source: CandidateSource;
+  days_in_stage: number;
+}
+
+/**
+ * Filtros para o Kanban
+ */
+export interface KanbanFilters {
+  search?: string;
+  job_id?: string;
+  minRating?: number;
+  maxRating?: number;
+  tags?: string[];
+  source?: CandidateSource;
+  appliedAfter?: string;
+  appliedBefore?: string;
+}
