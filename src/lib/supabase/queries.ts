@@ -3091,3 +3091,260 @@ export {
   type MyAbsence,
   type VacationBalanceInfo,
 } from './queries/absences-management';
+
+// ====================
+// TERMINATIONS - Rescisoes trabalhistas
+// ====================
+
+/**
+ * Termination status type
+ */
+export type TerminationStatus = 'draft' | 'calculated' | 'review' | 'approved' | 'paid' | 'cancelled';
+
+/**
+ * Termination type
+ */
+export type TerminationTypeDB = 'sem_justa_causa' | 'justa_causa' | 'pedido_demissao' | 'acordo_mutuo';
+
+/**
+ * Termination record
+ */
+export interface Termination {
+  id: string;
+  company_id: string;
+  employee_id: string;
+  employee_data: Record<string, unknown>;
+  termination_type: TerminationTypeDB;
+  termination_date: string;
+  notice_worked: boolean;
+  notice_days: number;
+  reason: string | null;
+  base_salary: number;
+  fgts_balance: number;
+  salary_balance: number;
+  vacation_vested: number;
+  vacation_proportional: number;
+  vacation_bonus: number;
+  thirteenth_proportional: number;
+  notice_period_value: number;
+  fgts_fine: number;
+  other_earnings: number;
+  inss_deduction: number;
+  irrf_deduction: number;
+  notice_penalty: number;
+  other_deductions: number;
+  total_gross: number;
+  total_deductions: number;
+  total_net: number;
+  fgts_withdrawable: number;
+  has_unemployment_insurance: boolean;
+  can_withdraw_fgts: boolean;
+  details: Record<string, unknown>;
+  status: TerminationStatus;
+  calculated_at: string | null;
+  calculated_by: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  paid_at: string | null;
+  paid_by: string | null;
+  document_url: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+/**
+ * Termination with employee info
+ */
+export interface TerminationWithEmployee extends Termination {
+  employee_name: string;
+  employee_cpf: string;
+  employee_position: string;
+  employee_department: string | null;
+}
+
+/**
+ * Get employee data for termination calculation
+ */
+export async function getEmployeeForTermination(
+  employeeId: string
+): Promise<QueryResult<Employee>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const { data, error } = await supabase
+    .from('employees')
+    .select('*')
+    .eq('id', employeeId)
+    .eq('status', 'active')
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Create a new termination record
+ */
+export async function createTermination(
+  termination: Omit<Termination, 'id' | 'created_at' | 'updated_at' | 'total_gross' | 'total_deductions' | 'total_net'>
+): Promise<QueryResult<Termination>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const { data, error } = await supabase
+    .from('terminations')
+    .insert(termination)
+    .select()
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Update termination record
+ */
+export async function updateTermination(
+  terminationId: string,
+  updates: Partial<Termination>
+): Promise<QueryResult<Termination>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const { data, error } = await supabase
+    .from('terminations')
+    .update(updates)
+    .eq('id', terminationId)
+    .select()
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Get termination by ID
+ */
+export async function getTermination(
+  terminationId: string
+): Promise<QueryResult<Termination>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const { data, error } = await supabase
+    .from('terminations')
+    .select('*')
+    .eq('id', terminationId)
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * List terminations for a company
+ */
+export async function listTerminations(
+  companyId: string,
+  filters?: {
+    status?: TerminationStatus;
+    startDate?: string;
+    endDate?: string;
+  }
+): Promise<QueryResultArray<TerminationWithEmployee>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  let query = supabase
+    .from('terminations')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('termination_date', { ascending: false });
+
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  if (filters?.startDate) {
+    query = query.gte('termination_date', filters.startDate);
+  }
+
+  if (filters?.endDate) {
+    query = query.lte('termination_date', filters.endDate);
+  }
+
+  const { data, error } = await query;
+
+  // Transform data to include employee info from employee_data JSONB
+  const transformedData = data?.map((t: Termination) => ({
+    ...t,
+    employee_name: (t.employee_data?.name as string) || '',
+    employee_cpf: (t.employee_data?.cpf as string) || '',
+    employee_position: (t.employee_data?.position as string) || '',
+    employee_department: (t.employee_data?.department as string) || null,
+  })) as TerminationWithEmployee[] | null;
+
+  return {
+    data: transformedData,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Approve termination
+ */
+export async function approveTermination(
+  terminationId: string
+): Promise<QueryResult<Termination>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from('terminations')
+    .update({
+      status: 'approved',
+      approved_at: new Date().toISOString(),
+      approved_by: user?.id,
+    })
+    .eq('id', terminationId)
+    .select()
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}
+
+/**
+ * Cancel termination
+ */
+export async function cancelTermination(
+  terminationId: string
+): Promise<QueryResult<Termination>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
+
+  const { data, error } = await supabase
+    .from('terminations')
+    .update({ status: 'cancelled' })
+    .eq('id', terminationId)
+    .select()
+    .single();
+
+  return {
+    data,
+    error: error ? { message: error.message, code: error.code } : null,
+  };
+}

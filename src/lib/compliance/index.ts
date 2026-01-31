@@ -86,6 +86,24 @@ export {
 } from './clt-calculations'
 
 // ============================================================================
+// Termination Calculations - Calculos de rescisao
+// ============================================================================
+export {
+  type TerminationType,
+  type TerminationInput,
+  type TerminationResult,
+  calculateTermination,
+  calculateNoticeDays,
+  calculateINSS,
+  calculateIRRF,
+  getMonthsDiff,
+  getYearsDiff,
+  getTerminationTypeLabel,
+  getTerminationRightsSummary,
+  formatCurrencyBRL,
+} from './termination-calculations'
+
+// ============================================================================
 // AFD Generator - Arquivo Fonte de Dados
 // ============================================================================
 export {

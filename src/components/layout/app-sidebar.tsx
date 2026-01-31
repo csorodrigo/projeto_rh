@@ -130,6 +130,10 @@ const navigationItems: NavigationItem[] = [
     url: "/folha",
     icon: DollarSign,
     iconColor: "text-emerald-600",
+    items: [
+      { title: "Mensal", url: "/folha" },
+      { title: "Rescisão", url: "/folha/rescisao" },
+    ],
   },
   {
     title: "Recrutamento",
