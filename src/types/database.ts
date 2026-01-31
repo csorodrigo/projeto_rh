@@ -567,7 +567,7 @@ export interface ASO {
   expiry_date: string;
   result: string;
   doctor_name: string;
-  doctor_crm: string;
+  crm: string;
   clinic_name: string | null;
   document_url: string | null;
   notes: string | null;

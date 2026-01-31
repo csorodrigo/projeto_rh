@@ -673,9 +673,10 @@ export async function createASO(
 
 /**
  * Create a new medical certificate
+ * Note: total_days is a GENERATED column in the database (calculated from end_date - start_date + 1)
  */
 export async function createMedicalCertificate(
-  data: Omit<MedicalCertificate, 'id' | 'created_at' | 'updated_at'>
+  data: Omit<MedicalCertificate, 'id' | 'created_at' | 'updated_at' | 'total_days'>
 ): Promise<QueryResult<MedicalCertificate>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient() as any;

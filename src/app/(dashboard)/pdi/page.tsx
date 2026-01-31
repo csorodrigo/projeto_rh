@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   Plus,
   Target,
@@ -91,6 +92,7 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 export default function PDIPage() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = React.useState(true)
   const [pdis, setPdis] = React.useState<PDIWithEmployee[]>([])
   const [cycles, setCycles] = React.useState<EvaluationCycleListItem[]>([])
@@ -160,11 +162,11 @@ export default function PDIPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => router.push('/pdi/gerar')}>
             <Sparkles className="mr-2 size-4" />
             Gerar PDI com IA
           </Button>
-          <Button>
+          <Button onClick={() => router.push('/pdi/novo')}>
             <Plus className="mr-2 size-4" />
             Novo PDI
           </Button>

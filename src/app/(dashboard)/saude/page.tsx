@@ -134,7 +134,7 @@ export default function HealthPage() {
     expiry_date: "",
     result: "",
     doctor_name: "",
-    doctor_crm: "",
+    crm: "",
     clinic_name: "",
     notes: "",
   })
@@ -236,7 +236,7 @@ export default function HealthPage() {
       expiry_date: "",
       result: "",
       doctor_name: "",
-      doctor_crm: "",
+      crm: "",
       clinic_name: "",
       notes: "",
     })
@@ -283,7 +283,7 @@ export default function HealthPage() {
         expiry_date: asoForm.expiry_date,
         result: asoForm.result,
         doctor_name: asoForm.doctor_name,
-        doctor_crm: asoForm.doctor_crm,
+        crm: asoForm.crm,
         clinic_name: asoForm.clinic_name || null,
         notes: asoForm.notes || null,
         document_url: null,
@@ -329,14 +329,15 @@ export default function HealthPage() {
     setIsSubmitting(true)
 
     try {
-      const totalDays = parseInt(certForm.total_days) || calculateDays(certForm.start_date, certForm.end_date)
+      // Calcular dias para verificacao de INSS (o banco calcula total_days automaticamente)
+      const calculatedDays = calculateDays(certForm.start_date, certForm.end_date)
 
       const result = await createMedicalCertificate({
         company_id: companyId,
         employee_id: certForm.employee_id,
         start_date: certForm.start_date,
         end_date: certForm.end_date,
-        total_days: totalDays,
+        // total_days e GENERATED no banco (calculado automaticamente)
         doctor_name: certForm.doctor_name,
         crm: certForm.crm,
         crm_state: certForm.crm_state || null,
@@ -355,7 +356,7 @@ export default function HealthPage() {
         validated_at: null,
         validation_notes: null,
         absence_id: null,
-        requires_inss: totalDays > 15,
+        requires_inss: calculatedDays > 15,
         inss_protocol: null,
         inss_start_date: null,
         inss_status: null,
@@ -778,8 +779,8 @@ export default function HealthPage() {
                   <Input
                     id="aso-crm"
                     placeholder="123456/SP"
-                    value={asoForm.doctor_crm}
-                    onChange={(e) => handleAsoChange("doctor_crm", e.target.value)}
+                    value={asoForm.crm}
+                    onChange={(e) => handleAsoChange("crm", e.target.value)}
                   />
                 </div>
               </div>
